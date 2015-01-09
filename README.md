@@ -10,9 +10,9 @@ The [examples](./examples) directory contains example codes and images.
 ### Decoding WebP into image.RGBA
 
 ```
-import (
-	"io/ioutil"
+package main
 
+import (
 	"github.com/harukasan/go-libwebp/examples/util"
 	"github.com/harukasan/go-libwebp/webp"
 )
@@ -21,10 +21,7 @@ func main() {
 	var err error
 
 	// Read binary data
-	data, err := ioutil.ReadFile("examples/cosmos.webp")
-	if err != nil {
-		panic(err)
-	}
+	data := util.ReadFile("cosmos.webp")
 
 	// Decode
 	options := &webp.DecoderOptions{}
@@ -33,10 +30,7 @@ func main() {
 		panic(err)
 	}
 
-	err = util.WritePNG(img, "out/encoded_cosmos.png")
-	if err != nil {
-		panic(err)
-	}
+	util.WritePNG(img, "encoded_cosmos.png")
 }
 ```
 
@@ -56,19 +50,22 @@ import (
 )
 
 func main() {
-	err := util.ReadPNG("examples/cosmos.png")
-	if err != nil {
-		panic()
-	}
+	img := util.ReadPNG("cosmos.png")
 
-	// Encode to WebP
-	io := ("out.webp")
-	w := bufio.NewWriter(f)
+	// Create file and buffered writer
+	io := util.CreateFile("encoded_cosmos.webp")
+	w := bufio.NewWriter(io)
 	defer func() {
 		w.Flush()
-		f.Close()
+		io.Close()
 	}()
 
+	config := webp.Config{
+		Preset:  webp.PresetDefault,
+		Quality: 90,
+	}
+
+	// Encode into WebP
 	if err := webp.EncodeRGBA(w, img.(*image.RGBA), config); err != nil {
 		panic(err)
 	}
