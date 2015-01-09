@@ -17,19 +17,20 @@ import (
 	"unsafe"
 )
 
-// DecoderOptions specifies decoding options
+// DecoderOptions specifies decoding options of WebP.
 type DecoderOptions struct {
-	BypassFiltering        bool
-	NoFancyUpsampling      bool
-	Crop                   image.Rectangle
-	Scale                  image.Rectangle
-	UseThreads             bool
-	DitheringStrength      int
-	Flip                   bool
-	AlphaDitheringStrength int
+	BypassFiltering        bool            // If true, bypass filtering process
+	NoFancyUpsampling      bool            // If true, do not fancy upsampling
+	Crop                   image.Rectangle // Do cropping if image.Rectangle is not empty.
+	Scale                  image.Rectangle // Do scaling if image.Rectangle is not empty.
+	UseThreads             bool            // If true, use multi threads
+	DitheringStrength      int             // Specify dithering strength [0=Off .. 100=full]
+	Flip                   bool            // If true, flip output vertically
+	AlphaDitheringStrength int             // Specify alpha dithering strength in [0..100]
 }
 
-// BitstreamFeatures retrived from data stream.
+// BitstreamFeatures represents the image properties which are retrived from
+// data stream.
 type BitstreamFeatures struct {
 	Width                 int  // Image width in pixels
 	Height                int  // Image height in pixles
@@ -52,7 +53,7 @@ func GetInfo(data []byte) (width, height int) {
 	return int(w), int(h)
 }
 
-// GetFeatures returns features retrived from data stream.
+// GetFeatures returns features as BitstreamFeatures retrived from data stream.
 func GetFeatures(data []byte) (f *BitstreamFeatures, err error) {
 	var cf C.WebPBitstreamFeatures
 	status := C.WebPGetFeatures((*C.uint8_t)(&data[0]), (C.size_t)(len(data)), &cf)
@@ -72,7 +73,8 @@ func GetFeatures(data []byte) (f *BitstreamFeatures, err error) {
 	return
 }
 
-// DecodeYUVA decodes WebP image into YUV image with alpha channel.
+// DecodeYUVA decodes WebP image into YUV image with alpha channel, and returns
+// it as *YUVAImage.
 func DecodeYUVA(data []byte, options *DecoderOptions) (img *YUVAImage, err error) {
 	config, err := initDecoderConfig(options)
 	if err != nil {
@@ -127,7 +129,7 @@ func DecodeYUVA(data []byte, options *DecoderOptions) (img *YUVAImage, err error
 	return
 }
 
-// DecodeRGBA decodes WebP image into RGBA image.
+// DecodeRGBA decodes WebP image into RGBA image and returns it as an *image.RGBA.
 func DecodeRGBA(data []byte, options *DecoderOptions) (img *image.RGBA, err error) {
 	config, err := initDecoderConfig(options)
 	if err != nil {

@@ -1,3 +1,5 @@
+// Package webp provides an interface to libwebp library to decoding/encoding
+// WebP image.
 package webp
 
 /*
@@ -19,7 +21,7 @@ const (
 	YUV420A ColorSpace = C.WEBP_YUV420A
 )
 
-// Preset corresponds to C.WebPPreset
+// Preset corresponds to C.WebPPreset.
 type Preset int
 
 const (

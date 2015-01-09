@@ -1,3 +1,4 @@
+// Package main is an example implementation of WebP encoder.
 package main
 
 import (

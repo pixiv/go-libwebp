@@ -4,10 +4,16 @@ import "image"
 
 // YUVAImage represents a image of YUV colors with alpha channel image.
 //
-// We can not insert WebP planer image into image.YCbCr,
-// because image.YCbCr is not compatible with ITU-R BT.601, but JFIF/JPEG one.
+// YUVAImage contains decoded YCbCr image data with alpha channel,
+// but it is not compatible with image.YCbCr. Because, the RGB-YCbCr conversion
+// that used in WebP is following to ITU-R BT.601 standard.
+// In contrast, the conversion of Image.YCbCr (and color.YCbCrModel) is following
+// to the JPEG standard (JFIF). If you need the image as image.YCBCr, you will
+// first convert from WebP to RGB image, then convert from RGB image to JPEG's
+// YCbCr image.
 //
 // See: http://en.wikipedia.org/wiki/YCbCr
+//
 type YUVAImage struct {
 	Y, Cb, Cr, A []uint8
 	YStride      int
