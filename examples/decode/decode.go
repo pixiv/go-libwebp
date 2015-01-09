@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/harukasan/go-libwebp/examples/util"
+	"github.com/harukasan/go-libwebp/test/util"
 	"github.com/harukasan/go-libwebp/webp"
 )
 

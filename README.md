@@ -13,7 +13,7 @@ The [examples](./examples) directory contains example codes and images.
 package main
 
 import (
-	"github.com/harukasan/go-libwebp/examples/util"
+	"github.com/harukasan/go-libwebp/test/util"
 	"github.com/harukasan/go-libwebp/webp"
 )
 
@@ -45,7 +45,7 @@ import (
 	"bufio"
 	"image"
 
-	"github.com/harukasan/go-libwebp/examples/util"
+	"github.com/harukasan/go-libwebp/test/util"
 	"github.com/harukasan/go-libwebp/webp"
 )
 
