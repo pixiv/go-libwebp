@@ -3,22 +3,36 @@ package util
 
 import (
 	"bufio"
+	"fmt"
 	"image"
 	"image/png"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // GetExFilePath returns the path of specified example file.
 func GetExFilePath(name string) string {
-	return filepath.Join(os.Getenv("GOPATH"), "src/github.com/harukasan/go-libwebp/examples/images", name)
+	for _, gopath := range strings.Split(os.Getenv("GOPATH"), ":") {
+		path := filepath.Join(gopath, "src/github.com/harukasan/go-libwebp/examples/images", name)
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+	panic(fmt.Errorf("%v does not exist in any directory which contains in $GOPATH", name))
 }
 
 // GetOutFilePath returns the path of specified out file.
 func GetOutFilePath(name string) string {
-	return filepath.Join(os.Getenv("GOPATH"), "src/github.com/harukasan/go-libwebp/examples/out", name)
+	for _, gopath := range strings.Split(os.Getenv("GOPATH"), ":") {
+		path := filepath.Join(gopath, "src/github.com/harukasan/go-libwebp/examples/out")
+		if _, err := os.Stat(path); err == nil {
+			return filepath.Join(path, name)
+		}
+	}
+	panic(fmt.Errorf("out directory does not exist in any directory which contains in $GOPATH"))
 }
 
 // OpenFile opens specified example file
