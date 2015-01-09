@@ -3,58 +3,11 @@ package webp_test
 import (
 	"bufio"
 	"image"
-	"image/png"
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"testing"
 
+	"github.com/harukasan/go-libwebp/test/util"
 	"github.com/harukasan/go-libwebp/webp"
 )
-
-//
-// Utitlities of input/output example images
-//
-
-// GetExFilePath returns the path of specified example file.
-func GetExFilePath(name string) string {
-	return filepath.Join(os.Getenv("GOPATH"), "src/github.com/harukasan/go-libwebp/examples/images", name)
-}
-
-// OpenExFile opens specified example file
-func OpenExFile(name string) (io io.Reader) {
-	io, err := os.Open(GetExFilePath(name))
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-// ReadExFile reads and returns data bytes of specified example file.
-func ReadExFile(name string) (data []byte) {
-	data, err := ioutil.ReadFile(GetExFilePath(name))
-	if err != nil {
-		panic(err)
-	}
-	return
-}
-
-// CreateExOutFile creates output file into example/out directory.
-func CreateExOutFile(name string) (file *os.File) {
-	// Make output directory
-	dir := filepath.Join(os.Getenv("GOPATH"), "src/github.com/harukasan/go-libwebp/examples/out")
-	if err := os.Mkdir(dir, 0755); err != nil && os.IsNotExist(err) {
-		panic(err)
-	}
-
-	// Create example output file
-	file, err := os.Create(filepath.Join(dir, name))
-	if err != nil {
-		panic(err)
-	}
-	return
-}
 
 //
 // Decode
@@ -69,7 +22,7 @@ func TestGetDecoderVersion(t *testing.T) {
 }
 
 func TestGetInfo(t *testing.T) {
-	data := ReadExFile("cosmos.webp")
+	data := util.ReadFile("cosmos.webp")
 	width, height := webp.GetInfo(data)
 
 	if width != 1024 {
@@ -81,7 +34,7 @@ func TestGetInfo(t *testing.T) {
 }
 
 func TestGetFeatures(t *testing.T) {
-	data := ReadExFile("cosmos.webp")
+	data := util.ReadFile("cosmos.webp")
 	f, err := webp.GetFeatures(data)
 	if err != nil {
 		t.Errorf("Got Error: %v", err)
@@ -113,7 +66,7 @@ func TestDecodeYUV(t *testing.T) {
 	}
 
 	for _, file := range files {
-		data := ReadExFile(file)
+		data := util.ReadFile(file)
 		options := &webp.DecoderOptions{}
 
 		_, err := webp.DecodeYUVA(data, options)
@@ -133,7 +86,7 @@ func TestDecodeRGBA(t *testing.T) {
 	}
 
 	for _, file := range files {
-		data := ReadExFile(file)
+		data := util.ReadFile(file)
 		options := &webp.DecoderOptions{}
 
 		_, err := webp.DecodeRGBA(data, options)
@@ -145,7 +98,7 @@ func TestDecodeRGBA(t *testing.T) {
 }
 
 func TestDecodeRGBAWithCropping(t *testing.T) {
-	data := ReadExFile("cosmos.webp")
+	data := util.ReadFile("cosmos.webp")
 	crop := image.Rect(100, 100, 300, 200)
 
 	options := &webp.DecoderOptions{
@@ -163,7 +116,7 @@ func TestDecodeRGBAWithCropping(t *testing.T) {
 }
 
 func TestDecodeRGBAWithScaling(t *testing.T) {
-	data := ReadExFile("cosmos.webp")
+	data := util.ReadFile("cosmos.webp")
 	scale := image.Rect(0, 0, 640, 480)
 
 	options := &webp.DecoderOptions{
@@ -185,7 +138,7 @@ func TestDecodeRGBAWithScaling(t *testing.T) {
 //
 
 func TestEncodeRGBA(t *testing.T) {
-	img, _ := png.Decode(OpenExFile("yellow-rose-3.png"))
+	img := util.ReadPNG("yellow-rose-3.png")
 
 	config := webp.Config{
 		Preset:  webp.PresetDefault,
@@ -193,7 +146,7 @@ func TestEncodeRGBA(t *testing.T) {
 		Method:  6,
 	}
 
-	f := CreateExOutFile("TestEncodeRGBA.webp")
+	f := util.CreateFile("TestEncodeRGBA.webp")
 	w := bufio.NewWriter(f)
 	defer func() {
 		w.Flush()
@@ -207,7 +160,7 @@ func TestEncodeRGBA(t *testing.T) {
 }
 
 func TestEncodeYUVA(t *testing.T) {
-	data := ReadExFile("cosmos.webp")
+	data := util.ReadFile("cosmos.webp")
 	options := &webp.DecoderOptions{}
 
 	img, err := webp.DecodeYUVA(data, options)
@@ -216,7 +169,7 @@ func TestEncodeYUVA(t *testing.T) {
 		return
 	}
 
-	f := CreateExOutFile("TestEncodeYUVA.webp")
+	f := util.CreateFile("TestEncodeYUVA.webp")
 	w := bufio.NewWriter(f)
 	defer func() {
 		w.Flush()
