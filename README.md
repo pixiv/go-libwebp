@@ -1,6 +1,8 @@
 go-libwebp
 ==========
 
+[![Build Status](https://travis-ci.org/harukasan/go-libwebp.svg)](https://travis-ci.org/harukasan/go-libwebp)
+
 A implementation of Go binding for [libwebp](https://developers.google.com/speed/webp/docs/api) written with cgo.
 
 ## Usage
