@@ -37,7 +37,6 @@ type BitstreamFeatures struct {
 	HasAlpha              bool // True if data stream contains a alpha channel.
 	HasAnimation          bool // True if data stream is an animation
 	Format                int  // Image compression format
-	NoIncrementalDecoding bool // True if incremental decording is not using
 }
 
 // GetDecoderVersion returns decoder's version number, packed in hexadecimal.
@@ -68,7 +67,6 @@ func GetFeatures(data []byte) (f *BitstreamFeatures, err error) {
 		HasAlpha:              cf.has_alpha > 0,
 		HasAnimation:          cf.has_animation > 0,
 		Format:                int(cf.format),
-		NoIncrementalDecoding: cf.no_incremental_decoding == 1,
 	}
 	return
 }
