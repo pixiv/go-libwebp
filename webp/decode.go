@@ -32,11 +32,11 @@ type DecoderOptions struct {
 // BitstreamFeatures represents the image properties which are retrived from
 // data stream.
 type BitstreamFeatures struct {
-	Width                 int  // Image width in pixels
-	Height                int  // Image height in pixles
-	HasAlpha              bool // True if data stream contains a alpha channel.
-	HasAnimation          bool // True if data stream is an animation
-	Format                int  // Image compression format
+	Width        int  // Image width in pixels
+	Height       int  // Image height in pixles
+	HasAlpha     bool // True if data stream contains a alpha channel.
+	HasAnimation bool // True if data stream is an animation
+	Format       int  // Image compression format
 }
 
 // GetDecoderVersion returns decoder's version number, packed in hexadecimal.
@@ -62,11 +62,11 @@ func GetFeatures(data []byte) (f *BitstreamFeatures, err error) {
 	}
 
 	f = &BitstreamFeatures{
-		Width:                 int(cf.width), // TODO: use Rectangle instaed?
-		Height:                int(cf.height),
-		HasAlpha:              cf.has_alpha > 0,
-		HasAnimation:          cf.has_animation > 0,
-		Format:                int(cf.format),
+		Width:        int(cf.width), // TODO: use Rectangle instaed?
+		Height:       int(cf.height),
+		HasAlpha:     cf.has_alpha > 0,
+		HasAnimation: cf.has_animation > 0,
+		Format:       int(cf.format),
 	}
 	return
 }
