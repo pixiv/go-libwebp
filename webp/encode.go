@@ -25,6 +25,8 @@ import (
 	"io"
 	"sync"
 	"unsafe"
+
+	"github.com/pixiv/go-libjpeg/rgb"
 )
 
 // Config specifies WebP encoding configuration.
@@ -118,6 +120,8 @@ func EncodeRGBA(w io.Writer, img image.Image, c Config) (err error) {
 	pic.writer = C.WebPWriterFunction(C.writeWebP)
 
 	switch p := img.(type) {
+	case *rgb.Image:
+		C.WebPPictureImportRGB(pic, (*C.uint8_t)(&p.Pix[0]), C.int(p.Stride))
 	case *image.RGBA:
 		C.WebPPictureImportRGBA(pic, (*C.uint8_t)(&p.Pix[0]), C.int(p.Stride))
 	case *image.NRGBA:

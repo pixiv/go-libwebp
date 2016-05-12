@@ -170,6 +170,28 @@ func TestEncodeRGBA(t *testing.T) {
 	}
 }
 
+func TestEncodeRGB(t *testing.T) {
+	img := util.ReadPNG("yellow-rose-3.png")
+
+	config := webp.Config{
+		Preset:  webp.PresetDefault,
+		Quality: 100,
+		Method:  6,
+	}
+
+	f := util.CreateFile("TestEncodeRGB.webp")
+	w := bufio.NewWriter(f)
+	defer func() {
+		w.Flush()
+		f.Close()
+	}()
+
+	if err := webp.EncodeRGBA(w, img, config); err != nil {
+		t.Errorf("Got Error: %v", err)
+		return
+	}
+}
+
 func TestEncodeYUVA(t *testing.T) {
 	data := util.ReadFile("cosmos.webp")
 	options := &webp.DecoderOptions{}
