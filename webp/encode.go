@@ -131,6 +131,9 @@ func initConfig(c Config) (config *C.WebPConfig, err error) {
 	}
 	config.target_size = C.int(c.TargetSize)
 	config.target_PSNR = C.float(c.TargetPSNR)
+	if c.Lossless {
+		config.lossless = C.int(1)
+	}
 
 	if C.WebPValidateConfig(config) == 0 {
 		return nil, errors.New("Invalid configuration")
