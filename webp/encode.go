@@ -8,6 +8,14 @@ package webp
 
 int writeWebP(uint8_t*, size_t, struct WebPPicture*);
 
+static WebPPicture *malloc_WebPPicture(void) {
+	return malloc(sizeof(WebPPicture));
+}
+
+static void free_WebPPicture(WebPPicture* webpPicture) {
+	free(webpPicture);
+}
+
 */
 import "C"
 import (
@@ -15,7 +23,10 @@ import (
 	"fmt"
 	"image"
 	"io"
+	"sync"
 	"unsafe"
+
+	"github.com/pixiv/go-libjpeg/rgb"
 )
 
 // Config specifies WebP encoding configuration.
@@ -38,9 +49,39 @@ type destinationManager struct {
 	writer io.Writer
 }
 
+var destinationManagerMapMutex sync.RWMutex
+var destinationManagerMap = make(map[uintptr]*destinationManager)
+
+// GetDestinationManagerMapLen returns the number of globally working sourceManagers for debug
+func GetDestinationManagerMapLen() int {
+	destinationManagerMapMutex.RLock()
+	defer destinationManagerMapMutex.RUnlock()
+	return len(destinationManagerMap)
+}
+
+func makeDestinationManager(w io.Writer, pic *C.WebPPicture) (mgr *destinationManager) {
+	mgr = &destinationManager{writer: w}
+	destinationManagerMapMutex.Lock()
+	defer destinationManagerMapMutex.Unlock()
+	destinationManagerMap[uintptr(unsafe.Pointer(pic))] = mgr
+	return
+}
+
+func releaseDestinationManager(pic *C.WebPPicture) {
+	destinationManagerMapMutex.Lock()
+	defer destinationManagerMapMutex.Unlock()
+	delete(destinationManagerMap, uintptr(unsafe.Pointer(pic)))
+}
+
+func getDestinationManager(pic *C.WebPPicture) *destinationManager {
+	destinationManagerMapMutex.RLock()
+	defer destinationManagerMapMutex.RUnlock()
+	return destinationManagerMap[uintptr(unsafe.Pointer(pic))]
+}
+
 //export writeWebP
 func writeWebP(data *C.uint8_t, size C.size_t, pic *C.WebPPicture) C.int {
-	mgr := (*destinationManager)(unsafe.Pointer(pic.custom_ptr))
+	mgr := getDestinationManager(pic)
 	bytes := C.GoBytes(unsafe.Pointer(data), C.int(size))
 	_, err := mgr.writer.Write(bytes)
 	if err != nil {
@@ -57,30 +98,39 @@ func EncodeRGBA(w io.Writer, img image.Image, c Config) (err error) {
 		return
 	}
 
-	var pic C.WebPPicture
-	if C.WebPPictureInit(&pic) == 0 {
+	pic := C.malloc_WebPPicture()
+	if pic == nil {
+		return errors.New("Could not allocate webp picture")
+	}
+	defer C.free_WebPPicture(pic)
+
+	makeDestinationManager(w, pic)
+	defer releaseDestinationManager(pic)
+
+	if C.WebPPictureInit(pic) == 0 {
 		return errors.New("Could not initialize webp picture")
 	}
+	defer C.WebPPictureFree(pic)
+
 	pic.use_argb = 1
 
 	pic.width = C.int(img.Bounds().Dx())
 	pic.height = C.int(img.Bounds().Dy())
 
 	pic.writer = C.WebPWriterFunction(C.writeWebP)
-	pic.custom_ptr = unsafe.Pointer(&destinationManager{writer: w})
 
 	switch p := img.(type) {
+	case *rgb.Image:
+		C.WebPPictureImportRGB(pic, (*C.uint8_t)(&p.Pix[0]), C.int(p.Stride))
 	case *image.RGBA:
-		C.WebPPictureImportRGBA(&pic, (*C.uint8_t)(&p.Pix[0]), C.int(p.Stride))
+		C.WebPPictureImportRGBA(pic, (*C.uint8_t)(&p.Pix[0]), C.int(p.Stride))
 	case *image.NRGBA:
-		C.WebPPictureImportRGBA(&pic, (*C.uint8_t)(&p.Pix[0]), C.int(p.Stride))
+		C.WebPPictureImportRGBA(pic, (*C.uint8_t)(&p.Pix[0]), C.int(p.Stride))
 	default:
 		return errors.New("unsupported image type")
 	}
 
-	defer C.WebPPictureFree(&pic)
-
-	if C.WebPEncode(webpConfig, &pic) == 0 {
+	if C.WebPEncode(webpConfig, pic) == 0 {
 		return fmt.Errorf("Encoding error: %d", pic.error_code)
 	}
 
@@ -94,10 +144,20 @@ func EncodeYUVA(w io.Writer, img *YUVAImage, c Config) (err error) {
 		return
 	}
 
-	var pic C.WebPPicture
-	if C.WebPPictureInit(&pic) == 0 {
+	pic := C.malloc_WebPPicture()
+	if pic == nil {
+		return errors.New("Could not allocate webp picture")
+	}
+	defer C.free_WebPPicture(pic)
+
+	makeDestinationManager(w, pic)
+	defer releaseDestinationManager(pic)
+
+	if C.WebPPictureInit(pic) == 0 {
 		return errors.New("Could not initialize webp picture")
 	}
+	defer C.WebPPictureFree(pic)
+
 	pic.use_argb = 0
 	pic.colorspace = C.WebPEncCSP(img.ColorSpace)
 	pic.width = C.int(img.Rect.Dx())
@@ -116,7 +176,7 @@ func EncodeYUVA(w io.Writer, img *YUVAImage, c Config) (err error) {
 	pic.writer = C.WebPWriterFunction(C.writeWebP)
 	pic.custom_ptr = unsafe.Pointer(&destinationManager{writer: w})
 
-	if C.WebPEncode(webpConfig, &pic) == 0 {
+	if C.WebPEncode(webpConfig, pic) == 0 {
 		return fmt.Errorf("Encoding error: %d", pic.error_code)
 	}
 
