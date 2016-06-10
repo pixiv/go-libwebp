@@ -2,12 +2,23 @@ package webp_test
 
 import (
 	"bufio"
+	"fmt"
 	"image"
+	"os"
 	"testing"
 
 	"github.com/harukasan/go-libwebp/test/util"
 	"github.com/harukasan/go-libwebp/webp"
 )
+
+func TestMain(m *testing.M) {
+	result := m.Run()
+	if webp.GetDestinationManagerMapLen() > 0 {
+		fmt.Println("destinationManager leaked")
+		result = 2
+	}
+	os.Exit(result)
+}
 
 //
 // Decode
