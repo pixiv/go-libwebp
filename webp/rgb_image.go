@@ -6,8 +6,8 @@ import (
 	"image/color"
 )
 
-// Image represent image data which has RGB colors.
-// Image is compatible with image.RGBA, but does not have alpha channel to reduce using memory.
+// RGBImage represent image data which has RGB colors.
+// RGBImage is compatible with image.RGBA, but does not have alpha channel to reduce using memory.
 type RGBImage struct {
 	// Pix holds the image's stream, in R, G, B order.
 	Pix []uint8
@@ -47,7 +47,7 @@ func (p *RGBImage) RGBAAt(x, y int) color.RGBA {
 	return color.RGBA{p.Pix[i+0], p.Pix[i+1], p.Pix[i+2], 0xFF}
 }
 
-// ColorModel is RGB color model instance
+// RGBModel is RGB color model instance
 var RGBModel = color.ModelFunc(rgbModel)
 
 func rgbModel(c color.Color) color.Color {
@@ -75,6 +75,6 @@ func (c RGB) RGBA() (r, g, b, a uint32) {
 	return
 }
 
-// Make sure Image implements image.Image.
+// Make sure RGBImage implements image.Image.
 // See https://golang.org/doc/effective_go.html#blank_implements.
 var _ image.Image = new(RGBImage)
