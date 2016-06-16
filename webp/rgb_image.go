@@ -25,7 +25,7 @@ func NewRGBImage(r image.Rectangle) *RGBImage {
 
 // ColorModel returns RGB color model.
 func (p *RGBImage) ColorModel() color.Model {
-	return ColorModel
+	return RGBModel
 }
 
 // Bounds implements image.Image.At
@@ -48,7 +48,7 @@ func (p *RGBImage) RGBAAt(x, y int) color.RGBA {
 }
 
 // ColorModel is RGB color model instance
-var ColorModel = color.ModelFunc(rgbModel)
+var RGBModel = color.ModelFunc(rgbModel)
 
 func rgbModel(c color.Color) color.Color {
 	if _, ok := c.(RGB); ok {

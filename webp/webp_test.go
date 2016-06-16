@@ -226,7 +226,7 @@ func TestImageInterface(t *testing.T) {
 	rect := image.Rect(0, 0, 100, 100)
 	img := webp.NewRGBImage(rect)
 
-	if got := img.ColorModel(); got != webp.ColorModel {
+	if got := img.ColorModel(); got != webp.RGBModel {
 		t.Errorf("ColorModel() should return rgb.ColorModel, got: %v", got)
 	}
 
@@ -248,14 +248,14 @@ func TestImageInterface(t *testing.T) {
 func TestConvertFromRGBA(t *testing.T) {
 	rgba := color.RGBA{0x11, 0x22, 0x33, 0xFF}
 	expect := webp.RGB{0x11, 0x22, 0x33}
-	if got := webp.ColorModel.Convert(rgba); got != expect {
+	if got := webp.RGBModel.Convert(rgba); got != expect {
 		t.Errorf("got: %v, expect: %v", got, expect)
 	}
 }
 
 func TestConvertFromRGB(t *testing.T) {
 	c := webp.RGB{0x11, 0x22, 0x33}
-	if got := webp.ColorModel.Convert(c); got != c {
+	if got := webp.RGBModel.Convert(c); got != c {
 		t.Errorf("got: %v, expect: %v", got, c)
 	}
 }
