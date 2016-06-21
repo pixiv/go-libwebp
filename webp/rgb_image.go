@@ -1,4 +1,3 @@
-// Package rgb provides RGB image which implements image.Image interface.
 package webp
 
 import (
