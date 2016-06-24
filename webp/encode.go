@@ -170,8 +170,6 @@ func EncodeYUVA(w io.Writer, img *YUVAImage, c Config) (err error) {
 	}
 
 	pic.writer = C.WebPWriterFunction(C.writeWebP)
-	pic.custom_ptr = unsafe.Pointer(&destinationManager{writer: w})
-
 	if C.WebPEncode(webpConfig, pic) == 0 {
 		return fmt.Errorf("Encoding error: %d", pic.error_code)
 	}
