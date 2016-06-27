@@ -151,10 +151,9 @@ func TestDecodeRGBAWithScaling(t *testing.T) {
 func TestEncodeRGBA(t *testing.T) {
 	img := util.ReadPNG("yellow-rose-3.png")
 
-	config := webp.Config{
-		Preset:  webp.PresetDefault,
-		Quality: 100,
-		Method:  6,
+	config, err := webp.ConfigPreset(webp.PresetDefault, 100)
+	if err != nil {
+		t.Fatalf("got error: %v", err)
 	}
 
 	f := util.CreateFile("TestEncodeRGBA.webp")
@@ -173,10 +172,9 @@ func TestEncodeRGBA(t *testing.T) {
 func TestEncodeRGB(t *testing.T) {
 	img := util.ReadPNG("yellow-rose-3.png")
 
-	config := webp.Config{
-		Preset:  webp.PresetDefault,
-		Quality: 100,
-		Method:  6,
+	config, err := webp.ConfigPreset(webp.PresetDefault, 100)
+	if err != nil {
+		t.Fatalf("got error: %v", err)
 	}
 
 	f := util.CreateFile("TestEncodeRGB.webp")
@@ -209,10 +207,9 @@ func TestEncodeYUVA(t *testing.T) {
 		f.Close()
 	}()
 
-	config := webp.Config{
-		Preset:  webp.PresetDefault,
-		Quality: 100,
-		Method:  6,
+	config, err := webp.ConfigPreset(webp.PresetDefault, 100)
+	if err != nil {
+		t.Fatalf("got error: %v", err)
 	}
 
 	if err := webp.EncodeYUVA(w, img, config); err != nil {

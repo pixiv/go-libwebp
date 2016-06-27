@@ -14,8 +14,45 @@ static void free_WebPPicture(WebPPicture* webpPicture) {
 	free(webpPicture);
 }
 
+static int getNearLossless(WebPConfig* webpConfig, int* value) {
+#if WEBP_ENCODER_ABI_VERSION < 0x206
+	return 0;
+#else
+	*value = webpConfig->near_lossless;
+	return 1;
+#endif
+}
+
+static int setNearLossless(WebPConfig* webpConfig, int value) {
+#if WEBP_ENCODER_ABI_VERSION < 0x206
+	return 0;
+#else
+	webpConfig->near_lossless = value;
+	return 1;
+#endif
+}
+
+static int getExact(WebPConfig* webpConfig, int* value) {
+#if WEBP_ENCODER_ABI_VERSION < 0x209
+	return 0;
+#else
+	*value = webpConfig->exact;
+	return 1;
+#endif
+}
+
+static int setExact(WebPConfig* webpConfig, int value) {
+#if WEBP_ENCODER_ABI_VERSION < 0x209
+	return 0;
+#else
+	webpConfig->exact = value;
+	return 1;
+#endif
+}
+
 */
 import "C"
+
 import (
 	"errors"
 	"fmt"
@@ -27,18 +64,288 @@ import (
 
 // Config specifies WebP encoding configuration.
 type Config struct {
-	Preset          Preset     // Parameters Preset
-	Lossless        bool       // True if use lossless encoding
-	Quality         float32    // WebP quality factor, 0-100
-	Method          int        // Quality/Speed trade-off factor, 0=faster / 6=slower-better
-	TargetSize      int        // Target size of encoded file in bytes
-	TargetPSNR      float32    // Target PSNR, takes precedence over TargetSize
-	Segments        int        // Maximum number of segments to use, 1..4
-	SNSStrength     int        // Strength of spartial noise shaping, 0..100=maximum
-	FilterStrength  int        // Strength of filter, 0..100=strength
-	FilterSharpness int        // Sharpness of filter, 0..7=sharpness
-	FilterType      FilterType // Filtering type
-	Pass            int        // Number of entropy-analysis passes, 0..100
+	c C.WebPConfig
+}
+
+// ConfigPreset returns initialized configuration with given preset and quality
+// factor.
+func ConfigPreset(preset Preset, quality float32) (*Config, error) {
+	c := &Config{}
+	if C.WebPConfigPreset(&c.c, C.WebPPreset(preset), C.float(quality)) == 0 {
+		return nil, errors.New("failed to initialize webp config")
+	}
+	return c, nil
+}
+
+// ConfigLosslessPreset returns initialized configuration for lossless encoding.
+// Given level specifies desired efficiency level between 0 (fastest, lowest
+// compression) and 9 (slower, best compression).
+func ConfigLosslessPreset(level int) (*Config, error) {
+	c := &Config{}
+	if C.WebPConfigLosslessPreset(&c.c, C.int(level)) == 0 {
+		return nil, errors.New("failed to initialize webp config")
+	}
+	return c, nil
+}
+
+// SetLossless sets lossless parameter that specifies whether to enable lossless
+// encoding.
+func (c *Config) SetLossless(v bool) {
+	c.c.autofilter = boolToValue(v)
+}
+
+// Lossless returns lossless parameter flag whether to enable lossless encoding.
+func (c *Config) Lossless() bool {
+	return valueToBool(c.c.lossless)
+}
+
+// SetQuality sets encoding quality factor between 0 (smallest file) and 100
+// (biggest).
+func (c *Config) SetQuality(v float32) {
+	c.c.quality = C.float(v)
+}
+
+// Quality returns encoding quality factor.
+func (c *Config) Quality() float32 {
+	return float32(c.c.quality)
+}
+
+// SetMethod sets method parameter that specifies quality/speed trade-off
+// (0=fast, 6=slower-better).
+func (c *Config) SetMethod(v float32) {
+	c.c.method = C.int(v)
+}
+
+// Method returns method parameter.
+func (c *Config) Method() int {
+	return int(c.c.method)
+}
+
+// SetImageHint sets hint for image type. It is used to only lossless encoding
+// for now.
+func (c *Config) SetImageHint(v ImageHint) {
+	c.c.image_hint = C.WebPImageHint(v)
+}
+
+// ImageHint returns hint parameter for image type.
+func (c *Config) ImageHint() ImageHint {
+	return ImageHint(c.c.image_hint)
+}
+
+// SetTargetPSNR sets target PSNR value that specifies the minimal distortion to
+// try to achieve. If it sets 0, disable target PSNR.
+func (c *Config) SetTargetPSNR(v float32) {
+	c.c.target_PSNR = C.float(v)
+}
+
+// TargetPSNR returns target PSNR value.
+func (c *Config) TargetPSNR() float32 {
+	return float32(c.c.target_PSNR)
+}
+
+// SetSegments sets segments parameter that specifies the maximum number of
+// segments to use, in [1..4].
+func (c *Config) SetSegments(v int) {
+	c.c.segments = C.int(v)
+}
+
+// Segments returns segments parameter.
+func (c *Config) Segments() int {
+	return int(c.c.segments)
+}
+
+// SetSNSStrength sets SNS strength parameter between 0 (off) and 100 (maximum).
+func (c *Config) SetSNSStrength(v int) {
+	c.c.sns_strength = C.int(v)
+}
+
+// SNSStrength returns SNS strength parameter.
+func (c *Config) SNSStrength() int {
+	return int(c.c.sns_strength)
+}
+
+// SetFilterStrength sets filter strength parameter between 0 (off) and 100
+// (strongest).
+func (c *Config) SetFilterStrength(v int) {
+	c.c.filter_strength = C.int(v)
+}
+
+// FilterStrength returns filter strength parameter.
+func (c *Config) FilterStrength() int {
+	return int(c.c.filter_strength)
+}
+
+// SetFilterSharpness sets filter sharpness parameter between 0 (off) and 7
+// (least sharp).
+func (c *Config) SetFilterSharpness(v int) {
+	c.c.filter_sharpness = C.int(v)
+}
+
+// FilterSharpness returns filter sharpness parameter.
+func (c *Config) FilterSharpness() int {
+	return int(c.c.filter_sharpness)
+}
+
+// SetFilterType sets filter type parameter.
+func (c *Config) SetFilterType(v FilterType) {
+	c.c.filter_type = C.int(v)
+}
+
+// FilterType returns filter type parameter.
+func (c *Config) FilterType() FilterType {
+	return FilterType(c.c.filter_type)
+}
+
+// SetAutoFilter sets auto filter flag that specifies whether to auto adjust
+// filter strength.
+func (c *Config) SetAutoFilter(v bool) {
+	c.c.autofilter = boolToValue(v)
+}
+
+// AutoFilter returns auto filter flag.
+func (c *Config) AutoFilter() bool {
+	return valueToBool(c.c.autofilter)
+}
+
+// SetAlphaCompression sets alpha compression parameter.
+func (c *Config) SetAlphaCompression(v int) {
+	c.c.alpha_compression = C.int(v)
+}
+
+// AlphaCompression returns alpha compression parameter.
+func (c *Config) AlphaCompression() int {
+	return int(c.c.alpha_compression)
+}
+
+// SetAlphaFiltering sets alpha filtering parameter.
+func (c *Config) SetAlphaFiltering(v int) {
+	c.c.alpha_filtering = C.int(v)
+}
+
+// AlphaFiltering returns alpha filtering parameter.
+func (c *Config) AlphaFiltering() int {
+	return int(c.c.alpha_filtering)
+}
+
+// SetPass sets pass parameter that specifies number of entropy-analysis passes
+// between 1 and 10.
+func (c *Config) SetPass(v int) {
+	c.c.pass = C.int(v)
+}
+
+// Pass returns pass parameter.
+func (c *Config) Pass() int {
+	return int(c.c.pass)
+}
+
+// SetPreprocessing sets preprocessing filter.
+func (c *Config) SetPreprocessing(v Preprocessing) {
+	c.c.preprocessing = C.int(v)
+}
+
+// Preprocessing returns preprocessing filter.
+func (c *Config) Preprocessing() Preprocessing {
+	return Preprocessing(c.c.preprocessing)
+}
+
+// SetPartitions sets partitions parameter.
+func (c *Config) SetPartitions(v int) {
+	c.c.partitions = C.int(v)
+}
+
+// Partitions returns partitions parameter.
+func (c *Config) Partitions() int {
+	return int(c.c.partitions)
+}
+
+// SetPartitionLimit returns partition limit parameter.
+func (c *Config) SetPartitionLimit(v int) {
+	c.c.partition_limit = C.int(v)
+}
+
+// PartitionLimit returns partition limit parameter.
+func (c *Config) PartitionLimit() int {
+	return int(c.c.partition_limit)
+}
+
+// SetEmulateJPEGSize sets flag whether the compression parameters remaps to
+// match the expected output size from JPEG compression.
+func (c *Config) SetEmulateJPEGSize(v bool) {
+	c.c.emulate_jpeg_size = boolToValue(v)
+}
+
+// EmulateJPEGSize returns the flag whether to enable emulating JPEG size.
+func (c *Config) EmulateJPEGSize() bool {
+	return valueToBool(c.c.emulate_jpeg_size)
+}
+
+// SetThreadLevel sets thread level parameter. If non-zero value is specified,
+// try and use multi-threaded encoding.
+func (c *Config) SetThreadLevel(v int) {
+	c.c.thread_level = C.int(v)
+}
+
+// ThreadLevel returns thread level parameter.
+func (c *Config) ThreadLevel() int {
+	return int(c.c.thread_level)
+}
+
+// SetLowMemory sets flag whether to reduce memory usage.
+func (c *Config) SetLowMemory(v bool) {
+	c.c.low_memory = boolToValue(v)
+}
+
+// LowMemory returns low memory flag.
+func (c *Config) LowMemory() bool {
+	return valueToBool(c.c.low_memory)
+}
+
+// SetNearLossless sets near lossless encoding factor between 0 (max loss) and
+// 100 (disable near lossless encoding, default).
+func (c *Config) SetNearLossless(v int) {
+	if C.setNearLossless(&c.c, C.int(v)) == 0 {
+		panic("near_lossless parameter is not supported")
+	}
+}
+
+// NearLossless returns near lossless encoding factor.
+func (c *Config) NearLossless() int {
+	var v C.int
+	if C.getNearLossless(&c.c, &v) == 0 {
+		panic("near_lossless parameter is not supported")
+	}
+	return int(v)
+}
+
+// SetExact sets the flag whether to preserve the exact RGB values under
+// transparent area.
+func (c *Config) SetExact(v bool) {
+	if C.setExact(&c.c, boolToValue(v)) == 0 {
+		panic("exact parameter is not supported")
+	}
+}
+
+// Exact returns exact flag.
+func (c *Config) Exact() bool {
+	var v C.int
+	if C.getExact(&c.c, &v) == 0 {
+		panic("exact parameter is not supported")
+	}
+	return valueToBool(v)
+}
+
+func boolToValue(v bool) C.int {
+	if v {
+		return 1
+	}
+	return 0
+}
+
+func valueToBool(v C.int) bool {
+	if v > 0 || v < 0 {
+		return true
+	}
+	return false
 }
 
 type destinationManager struct {
@@ -88,9 +395,8 @@ func writeWebP(data *C.uint8_t, size C.size_t, pic *C.WebPPicture) C.int {
 
 // EncodeRGBA encodes and writes image.Image into the writer as WebP.
 // Now supports image.RGBA or image.NRGBA.
-func EncodeRGBA(w io.Writer, img image.Image, c Config) (err error) {
-	webpConfig, err := initConfig(c)
-	if err != nil {
+func EncodeRGBA(w io.Writer, img image.Image, c *Config) (err error) {
+	if err = validateConfig(c); err != nil {
 		return
 	}
 
@@ -126,7 +432,7 @@ func EncodeRGBA(w io.Writer, img image.Image, c Config) (err error) {
 		return errors.New("unsupported image type")
 	}
 
-	if C.WebPEncode(webpConfig, pic) == 0 {
+	if C.WebPEncode(&c.c, pic) == 0 {
 		return fmt.Errorf("Encoding error: %d", pic.error_code)
 	}
 
@@ -134,9 +440,8 @@ func EncodeRGBA(w io.Writer, img image.Image, c Config) (err error) {
 }
 
 // EncodeYUVA encodes and writes YUVA Image data into the writer as WebP.
-func EncodeYUVA(w io.Writer, img *YUVAImage, c Config) (err error) {
-	webpConfig, err := initConfig(c)
-	if err != nil {
+func EncodeYUVA(w io.Writer, img *YUVAImage, c *Config) (err error) {
+	if err = validateConfig(c); err != nil {
 		return
 	}
 
@@ -170,27 +475,18 @@ func EncodeYUVA(w io.Writer, img *YUVAImage, c Config) (err error) {
 	}
 
 	pic.writer = C.WebPWriterFunction(C.writeWebP)
-	if C.WebPEncode(webpConfig, pic) == 0 {
+	pic.custom_ptr = unsafe.Pointer(&destinationManager{writer: w})
+
+	if C.WebPEncode(&c.c, pic) == 0 {
 		return fmt.Errorf("Encoding error: %d", pic.error_code)
 	}
 
 	return
 }
 
-// initConfig initializes C.WebPConfig with encoding parameters.
-func initConfig(c Config) (config *C.WebPConfig, err error) {
-	config = &C.WebPConfig{}
-	if C.WebPConfigPreset(config, C.WebPPreset(c.Preset), C.float(c.Quality)) == 0 {
-		return nil, errors.New("Could not initialize configuration with preset")
+func validateConfig(c *Config) error {
+	if C.WebPValidateConfig(&c.c) == 0 {
+		return errors.New("invalid configuration")
 	}
-	config.target_size = C.int(c.TargetSize)
-	config.target_PSNR = C.float(c.TargetPSNR)
-	if c.Lossless {
-		config.lossless = C.int(1)
-	}
-
-	if C.WebPValidateConfig(config) == 0 {
-		return nil, errors.New("Invalid configuration")
-	}
-	return
+	return nil
 }
