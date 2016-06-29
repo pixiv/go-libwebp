@@ -15,7 +15,7 @@ static void free_WebPPicture(WebPPicture* webpPicture) {
 	free(webpPicture);
 }
 
-static int webpEncodeGray(WebPConfig *config, WebPPicture *picture) {
+static int webpEncodeGray(const WebPConfig *config, WebPPicture *picture) {
 	int ok = 0;
 	const int c_width = (picture->width + 1) >> 1;
 	const int c_height = (picture->height + 1) >> 1;
