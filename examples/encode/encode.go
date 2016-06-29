@@ -20,10 +20,9 @@ func main() {
 		io.Close()
 	}()
 
-	config := webp.Config{
-		Preset:  webp.PresetDefault,
-		Quality: 90,
-		Method:  6,
+	config, err := webp.ConfigPreset(webp.PresetDefault, 90)
+	if err != nil {
+		panic(err)
 	}
 
 	// Encode into WebP

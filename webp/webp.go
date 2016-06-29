@@ -21,6 +21,17 @@ const (
 	YUV420A ColorSpace = C.WEBP_YUV420A
 )
 
+// ImageHint corresponds to C.WebPImageHint.
+type ImageHint int
+
+const (
+	HintDefault ImageHint = C.WEBP_HINT_DEFAULT
+	HintPicture ImageHint = C.WEBP_HINT_PICTURE
+	HintPhoto   ImageHint = C.WEBP_HINT_PHOTO
+	HintGraph   ImageHint = C.WEBP_HINT_GRAPH
+	HintLast    ImageHint = C.WEBP_HINT_LAST
+)
+
 // Preset corresponds to C.WebPPreset.
 type Preset int
 
@@ -47,4 +58,16 @@ const (
 	SimpleFilter FilterType = iota
 	// StrongFilter (=1)
 	StrongFilter
+)
+
+// Preprocessing corresponds to preprocessing filter parameter.
+type Preprocessing int
+
+const (
+	// PreprocessingNone specifies to disable preprocessing filter.
+	PreprocessingNone = 0
+	// PreprocessingSegmentSmooth specifies segment-smooth filter.
+	PreprocessingSegmentSmooth = 1
+	//PreprocessingPseudoRandomDithering specifies pseudo-random dithering filter.
+	PreprocessingPseudoRandomDithering = 2
 )

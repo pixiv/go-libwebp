@@ -4,7 +4,11 @@ go-libwebp
 [![Build Status](https://travis-ci.org/harukasan/go-libwebp.svg?branch=master)](https://travis-ci.org/harukasan/go-libwebp)
 [![GoDoc](https://godoc.org/github.com/harukasan/go-libwebp/webp?status.svg)](https://godoc.org/github.com/harukasan/go-libwebp/webp)
 
-A implementation of Go binding for [libwebp](https://developers.google.com/speed/webp/docs/api) written with cgo.
+A implementation of Go binding for [libwebp](https://developers.google.com/speed/webp/docs/api).
+
+## Dependencies
+
+- libwebp 0.4, 0.5
 
 ## Usage
 
@@ -63,10 +67,7 @@ func main() {
 		io.Close()
 	}()
 
-	config := webp.Config{
-		Preset:  webp.PresetDefault,
-		Quality: 90,
-	}
+	config := webp.ConfigPreset(webp.PresetDefault, 90)
 
 	// Encode into WebP
 	if err := webp.EncodeRGBA(w, img.(*image.RGBA), config); err != nil {
@@ -82,7 +83,7 @@ func main() {
 
 ## License
 
-Copyright (c) 2014 MICHII Shunsuke. All rights reserved.
+Copyright (c) 2016 MICHII Shunsuke. All rights reserved.
 
 This library is released under The BSD 2-Clause License.
 See [LICENSE](./LICENSE).
