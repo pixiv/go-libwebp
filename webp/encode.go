@@ -2,6 +2,7 @@ package webp
 
 /*
 #include <stdlib.h>
+#include <string.h>
 #include <webp/encode.h>
 
 int writeWebP(uint8_t*, size_t, struct WebPPicture*);
@@ -12,6 +13,32 @@ static WebPPicture *malloc_WebPPicture(void) {
 
 static void free_WebPPicture(WebPPicture* webpPicture) {
 	free(webpPicture);
+}
+
+static int webpEncodeGray(const WebPConfig *config, WebPPicture *picture) {
+	int ok = 0;
+	const int c_width = (picture->width + 1) >> 1;
+	const int c_height = (picture->height + 1) >> 1;
+	const int c_stride = c_width;
+	const int c_size = c_stride * c_height;
+	const int gray = 128;
+	uint8_t* chroma;
+
+	chroma = malloc(c_size);
+	if (!chroma) {
+		return 0;
+	}
+	memset(chroma, gray, c_size);
+
+	picture->u = chroma;
+	picture->v = chroma;
+	picture->uv_stride = c_stride;
+
+	ok = WebPEncode(config, picture);
+
+	free(chroma);
+
+	return ok;
 }
 
 static int webPConfigLosslessPreset(WebPConfig* webpConfig, int level) {
@@ -441,6 +468,40 @@ func EncodeRGBA(w io.Writer, img image.Image, c *Config) (err error) {
 	}
 
 	if C.WebPEncode(&c.c, pic) == 0 {
+		return fmt.Errorf("Encoding error: %d", pic.error_code)
+	}
+
+	return
+}
+
+func EncodeGray(w io.Writer, p *image.Gray, c *Config) (err error) {
+	if err = validateConfig(c); err != nil {
+		return
+	}
+
+	pic := C.malloc_WebPPicture()
+	if pic == nil {
+		return errors.New("Could not allocate webp picture")
+	}
+	defer C.free_WebPPicture(pic)
+
+	makeDestinationManager(w, pic)
+	defer releaseDestinationManager(pic)
+
+	if C.WebPPictureInit(pic) == 0 {
+		return errors.New("Could not initialize webp picture")
+	}
+	defer C.WebPPictureFree(pic)
+
+	pic.use_argb = 0
+	pic.width = C.int(p.Rect.Dx())
+	pic.height = C.int(p.Rect.Dy())
+	pic.y = (*C.uint8_t)(&p.Pix[0])
+	pic.y_stride = C.int(p.Stride)
+
+	pic.writer = C.WebPWriterFunction(C.writeWebP)
+
+	if C.webpEncodeGray(&c.c, pic) == 0 {
 		return fmt.Errorf("Encoding error: %d", pic.error_code)
 	}
 

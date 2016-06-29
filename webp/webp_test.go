@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"image"
+	"image/color"
 	"os"
 	"testing"
 
@@ -213,6 +214,30 @@ func TestEncodeYUVA(t *testing.T) {
 	}
 
 	if err := webp.EncodeYUVA(w, img, config); err != nil {
+		t.Errorf("Got Error: %v", err)
+		return
+	}
+}
+
+func TestEncodeGray(t *testing.T) {
+	p := image.NewGray(image.Rect(0, 0, 1, 10))
+	for i := 0; i < 10; i++ {
+		p.SetGray(0, i, color.Gray{uint8(float32(i) / 10 * 255)})
+	}
+
+	f := util.CreateFile("TestEncodeGray.webp")
+	w := bufio.NewWriter(f)
+	defer func() {
+		w.Flush()
+		f.Close()
+	}()
+
+	config, err := webp.ConfigPreset(webp.PresetDefault, 100)
+	if err != nil {
+		t.Fatalf("got error: %v", err)
+	}
+
+	if err := webp.EncodeGray(w, p, config); err != nil {
 		t.Errorf("Got Error: %v", err)
 		return
 	}
