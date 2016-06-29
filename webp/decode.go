@@ -101,16 +101,16 @@ func DecodeYUVA(data []byte, options *DecoderOptions) (img *YUVAImage, err error
 	// Allocate image and fill into buffer
 	img = NewYUVAImage(image.Rect(0, 0, outWidth, outHeight), colorSpace)
 	buf.y = (*C.uint8_t)(&img.Y[0])
-	buf.u = (*C.uint8_t)(&img.Cb[0])
-	buf.v = (*C.uint8_t)(&img.Cr[0])
+	buf.u = (*C.uint8_t)(&img.U[0])
+	buf.v = (*C.uint8_t)(&img.V[0])
 	buf.a = nil
 	buf.y_stride = C.int(img.YStride)
-	buf.u_stride = C.int(img.CStride)
-	buf.v_stride = C.int(img.CStride)
+	buf.u_stride = C.int(img.UVStride)
+	buf.v_stride = C.int(img.UVStride)
 	buf.a_stride = 0
 	buf.y_size = C.size_t(len(img.Y))
-	buf.u_size = C.size_t(len(img.Cb))
-	buf.v_size = C.size_t(len(img.Cr))
+	buf.u_size = C.size_t(len(img.U))
+	buf.v_size = C.size_t(len(img.V))
 	buf.a_size = 0
 
 	if config.input.has_alpha > 0 {

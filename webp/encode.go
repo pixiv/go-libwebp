@@ -533,10 +533,10 @@ func EncodeYUVA(w io.Writer, img *YUVAImage, c *Config) (err error) {
 	pic.width = C.int(img.Rect.Dx())
 	pic.height = C.int(img.Rect.Dy())
 	pic.y = (*C.uint8_t)(&img.Y[0])
-	pic.u = (*C.uint8_t)(&img.Cb[0])
-	pic.v = (*C.uint8_t)(&img.Cr[0])
+	pic.u = (*C.uint8_t)(&img.U[0])
+	pic.v = (*C.uint8_t)(&img.V[0])
 	pic.y_stride = C.int(img.YStride)
-	pic.uv_stride = C.int(img.CStride)
+	pic.uv_stride = C.int(img.UVStride)
 
 	if img.ColorSpace == YUV420A {
 		pic.a = (*C.uint8_t)(&img.A[0])
