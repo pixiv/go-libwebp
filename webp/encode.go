@@ -14,6 +14,14 @@ static void free_WebPPicture(WebPPicture* webpPicture) {
 	free(webpPicture);
 }
 
+static int webPConfigLosslessPreset(WebPConfig* webpConfig, int level) {
+#if WEBP_ENCODER_ABI_VERSION < 0x203
+	return 0;
+#else
+	return WebPConfigLosslessPreset(webpConfig, level);
+#endif
+}
+
 static int getNearLossless(WebPConfig* webpConfig, int* value) {
 #if WEBP_ENCODER_ABI_VERSION < 0x206
 	return 0;
@@ -82,7 +90,7 @@ func ConfigPreset(preset Preset, quality float32) (*Config, error) {
 // compression) and 9 (slower, best compression).
 func ConfigLosslessPreset(level int) (*Config, error) {
 	c := &Config{}
-	if C.WebPConfigLosslessPreset(&c.c, C.int(level)) == 0 {
+	if C.webPConfigLosslessPreset(&c.c, C.int(level)) == 0 {
 		return nil, errors.New("failed to initialize webp config")
 	}
 	return c, nil
