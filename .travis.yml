@@ -17,7 +17,7 @@ cache:
 sudo: false
 
 before_install:
-  - LIBWEBP_PERFIX=$HOME/cache/libwebp-${LIBWEBP_VERSION} && make libwebp
+  - LIBWEBP_PREFIX=$HOME/cache/libwebp-${LIBWEBP_VERSION} make libwebp
   - cd $HOME/gopath/src/github.com/harukasan/go-libwebp
   - export CGO_CFLAGS="-I $HOME/cache/libwebp-${LIBWEBP_VERSION}/include"
   - export CGO_LDFLAGS="-L $HOME/cache/libwebp-${LIBWEBP_VERSION}/lib"
