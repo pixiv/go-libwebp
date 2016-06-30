@@ -17,16 +17,7 @@ cache:
 sudo: false
 
 before_install:
-  - >
-      test -e $HOME/cache/libwebp-${LIBWEBP_VERSION}/lib/libwebp.so || (
-      cd /tmp
-      && wget http://downloads.webmproject.org/releases/webp/libwebp-${LIBWEBP_VERSION}.tar.gz
-      && tar xf libwebp-${LIBWEBP_VERSION}.tar.gz
-      && cd libwebp-${LIBWEBP_VERSION}
-      && ./configure --prefix=$HOME/cache/libwebp-${LIBWEBP_VERSION}
-      && make
-      && make install
-      )
+  - LIBWEBP_PERFIX=$HOME/cache/libwebp-${LIBWEBP_VERSION} && make libwebp
   - cd $HOME/gopath/src/github.com/harukasan/go-libwebp
   - export CGO_CFLAGS="-I $HOME/cache/libwebp-${LIBWEBP_VERSION}/include"
   - export CGO_LDFLAGS="-L $HOME/cache/libwebp-${LIBWEBP_VERSION}/lib"
