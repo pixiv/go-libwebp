@@ -34,6 +34,7 @@ docker-clean:
 .PHONY: \
 	all \
 	test \
+	libwebp \
 	docker-test \
 	docker-sh \
 	docker-build \
