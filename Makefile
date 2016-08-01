@@ -1,32 +1,32 @@
-BUILDDIR=/tmp
-WORKDIR=github.com/harukasan/go-libwebp
-CURDIR=$(shell pwd)
+repo=github.com/harukasan/go-libwebp
+build_dir=/tmp
+cur_dir=$(shell pwd)
+libwebp_so = ${LIBWEBP_PREFIX}/lib/libwebp.so
 
 all: test
 
 test:
-	go test -v ${WORKDIR}/...
+	go test -v $(repo)/...
 
-libwebp:
-	test -e ${LIBWEBP_PREFIX}/lib/libwebp.so || ( \
-		cd ${BUILDDIR} \
-		&& wget http://downloads.webmproject.org/releases/webp/libwebp-${LIBWEBP_VERSION}.tar.gz \
-		&& tar xf libwebp-${LIBWEBP_VERSION}.tar.gz \
-		&& cd libwebp-${LIBWEBP_VERSION} \
-		&& ./configure --prefix=${LIBWEBP_PREFIX} \
-		&& make \
-		&& make install \
-	)
+libwebp: $(libwebp_so)
+
+$(libwebp_so):
+	cd $(build_dir) \
+	&& wget http://downloads.webmproject.org/releases/webp/libwebp-${LIBWEBP_VERSION}.tar.gz \
+	&& tar xf libwebp-${LIBWEBP_VERSION}.tar.gz \
+	&& cd libwebp-${LIBWEBP_VERSION} \
+	&& ./configure --prefix=${LIBWEBP_PREFIX} \
+	&& make \
+	&& make install
 
 docker-test:
-	docker run -v ${CURDIR}:/go/src/github.com/harukasan/go-libwebp -it go-libwebp
+	docker run -v $(cur_dir):/go/src/$(repo) -it go-libwebp
 
 docker-sh:
-	docker run -v ${CURDIR}:/go/src/github.com/harukasan/go-libwebp -it go-libwebp sh
+	docker run -v $(cur_dir):/go/src/$(repo) -it go-libwebp sh
 
 docker-build:
 	docker build  -t go-libwebp .
-
 
 .PHONY: \
 	all \
