@@ -1,7 +1,7 @@
-repo=github.com/harukasan/go-libwebp
-build_dir=/tmp
-cur_dir=$(shell pwd)
-libwebp_so = ${LIBWEBP_PREFIX}/lib/libwebp.so
+repo = "github.com/harukasan/go-libwebp"
+build_dir = "/tmp"
+cur_dir = $(shell pwd)
+libwebp_so = "${LIBWEBP_PREFIX}/lib/libwebp.so"
 
 all: test
 
