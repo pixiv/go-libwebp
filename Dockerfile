@@ -6,7 +6,7 @@ RUN mkdir -p /tmp/go-lbiwebp
 COPY Makefile /tmp/go-libwebp/Makefile
 
 ENV LIBWEBP_PREFIX="/usr/local" \
-    LIBWEBP_VERSION="0.5.0"
+    LIBWEBP_VERSION="0.5.1"
 RUN cd /tmp/go-libwebp && make libwebp
 
 ENV GOPATH="/go" \
