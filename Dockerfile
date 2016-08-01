@@ -2,7 +2,6 @@ FROM alpine:3.4
 
 RUN apk add --no-cache g++ make go
 
-
 RUN mkdir -p /tmp/go-lbiwebp
 COPY Makefile /tmp/go-libwebp/Makefile
 

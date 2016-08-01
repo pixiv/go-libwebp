@@ -1,5 +1,6 @@
 BUILDDIR=/tmp
 WORKDIR=github.com/harukasan/go-libwebp
+CURDIR=$(shell pwd)
 
 all: test
 
@@ -17,7 +18,20 @@ libwebp:
 		&& make install \
 	)
 
+docker-test:
+	docker run -v ${CURDIR}:/go/src/github.com/harukasan/go-libwebp -it go-libwebp
+
+docker-sh:
+	docker run -v ${CURDIR}:/go/src/github.com/harukasan/go-libwebp -it go-libwebp sh
+
+docker-build:
+	docker build  -t go-libwebp .
+
+
 .PHONY: \
 	all \
-	test
+	test \
+	docker-test \
+	docker-sh \
+	docker-build
 
