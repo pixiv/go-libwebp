@@ -28,10 +28,14 @@ docker-sh:
 docker-build:
 	docker build  -t go-libwebp .
 
+docker-clean:
+	docker rm $$(docker ps -a -q -f "ancestor=go-libwebp")
+
 .PHONY: \
 	all \
 	test \
 	docker-test \
 	docker-sh \
-	docker-build
+	docker-build \
+	docker-clean
 
