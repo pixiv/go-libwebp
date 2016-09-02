@@ -262,6 +262,16 @@ func (c *Config) AlphaFiltering() int {
 	return int(c.c.alpha_filtering)
 }
 
+// SetAlphaQuality sets alpha quality parameter.
+func (c *Config) SetAlphaQuality(v int) {
+	c.c.alpha_quality = C.int(v)
+}
+
+// AlphaQuality returns alpha quality parameter.
+func (c *Config) AlphaQuality() int {
+	return int(c.c.alpha_quality)
+}
+
 // SetPass sets pass parameter that specifies number of entropy-analysis passes
 // between 1 and 10.
 func (c *Config) SetPass(v int) {
