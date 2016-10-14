@@ -147,7 +147,7 @@ func (c *Config) Quality() float32 {
 
 // SetMethod sets method parameter that specifies quality/speed trade-off
 // (0=fast, 6=slower-better).
-func (c *Config) SetMethod(v float32) {
+func (c *Config) SetMethod(v int) {
 	c.c.method = C.int(v)
 }
 
