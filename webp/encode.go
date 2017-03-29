@@ -7,8 +7,8 @@ package webp
 
 int writeWebP(uint8_t*, size_t, struct WebPPicture*);
 
-static WebPPicture *malloc_WebPPicture(void) {
-	return malloc(sizeof(WebPPicture));
+static WebPPicture *calloc_WebPPicture(void) {
+	return calloc(sizeof(WebPPicture), 1);
 }
 
 static void free_WebPPicture(WebPPicture* webpPicture) {
@@ -445,7 +445,7 @@ func EncodeRGBA(w io.Writer, img image.Image, c *Config) (err error) {
 		return
 	}
 
-	pic := C.malloc_WebPPicture()
+	pic := C.calloc_WebPPicture()
 	if pic == nil {
 		return errors.New("Could not allocate webp picture")
 	}
@@ -489,7 +489,7 @@ func EncodeGray(w io.Writer, p *image.Gray, c *Config) (err error) {
 		return
 	}
 
-	pic := C.malloc_WebPPicture()
+	pic := C.calloc_WebPPicture()
 	if pic == nil {
 		return errors.New("Could not allocate webp picture")
 	}
@@ -524,7 +524,7 @@ func EncodeYUVA(w io.Writer, img *YUVAImage, c *Config) (err error) {
 		return
 	}
 
-	pic := C.malloc_WebPPicture()
+	pic := C.calloc_WebPPicture()
 	if pic == nil {
 		return errors.New("Could not allocate webp picture")
 	}
