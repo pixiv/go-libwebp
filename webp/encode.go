@@ -15,7 +15,19 @@ static void free_WebPPicture(WebPPicture* webpPicture) {
 	free(webpPicture);
 }
 
-static int webpEncodeGray(const WebPConfig *config, WebPPicture *picture) {
+static int webpEncodeYUVA(const WebPConfig *config, WebPPicture *picture, uint8_t *y, uint8_t *u, uint8_t *v, uint8_t *a) {
+	picture->y = y;
+	picture->u = u;
+	picture->v = v;
+	if (picture->colorspace = WEBP_YUV420A) {
+		picture->a = a;
+	}
+	picture->writer = (WebPWriterFunction)writeWebP;
+
+  return WebPEncode(config, picture);
+}
+
+static int webpEncodeGray(const WebPConfig *config, WebPPicture *picture, uint8_t *y) {
 	int ok = 0;
 	const int c_width = (picture->width + 1) >> 1;
 	const int c_height = (picture->height + 1) >> 1;
@@ -30,9 +42,11 @@ static int webpEncodeGray(const WebPConfig *config, WebPPicture *picture) {
 	}
 	memset(chroma, gray, c_size);
 
+	picture->y = y;
 	picture->u = chroma;
 	picture->v = chroma;
 	picture->uv_stride = c_stride;
+	picture->writer = (WebPWriterFunction)writeWebP;
 
 	ok = WebPEncode(config, picture);
 
@@ -506,12 +520,9 @@ func EncodeGray(w io.Writer, p *image.Gray, c *Config) (err error) {
 	pic.use_argb = 0
 	pic.width = C.int(p.Rect.Dx())
 	pic.height = C.int(p.Rect.Dy())
-	pic.y = (*C.uint8_t)(&p.Pix[0])
 	pic.y_stride = C.int(p.Stride)
 
-	pic.writer = C.WebPWriterFunction(C.writeWebP)
-
-	if C.webpEncodeGray(&c.c, pic) == 0 {
+	if C.webpEncodeGray(&c.c, pic, (*C.uint8_t)(&p.Pix[0])) == 0 {
 		return fmt.Errorf("Encoding error: %d", pic.error_code)
 	}
 
@@ -542,24 +553,18 @@ func EncodeYUVA(w io.Writer, img *YUVAImage, c *Config) (err error) {
 	pic.colorspace = C.WebPEncCSP(img.ColorSpace)
 	pic.width = C.int(img.Rect.Dx())
 	pic.height = C.int(img.Rect.Dy())
-	pic.y = (*C.uint8_t)(&img.Y[0])
-	pic.u = (*C.uint8_t)(&img.Cb[0])
-	pic.v = (*C.uint8_t)(&img.Cr[0])
 	pic.y_stride = C.int(img.YStride)
 	pic.uv_stride = C.int(img.CStride)
-
+	var a *C.uint8_t
+	y, u, v := (*C.uint8_t)(&img.Y[0]), (*C.uint8_t)(&img.Cb[0]), (*C.uint8_t)(&img.Cr[0])
 	if img.ColorSpace == YUV420A {
-		pic.a = (*C.uint8_t)(&img.A[0])
 		pic.a_stride = C.int(img.AStride)
+		a = (*C.uint8_t)(&img.A[0])
 	}
 
-	pic.writer = C.WebPWriterFunction(C.writeWebP)
-	pic.custom_ptr = unsafe.Pointer(&destinationManager{writer: w})
-
-	if C.WebPEncode(&c.c, pic) == 0 {
+	if C.webpEncodeYUVA(&c.c, pic, y, u, v, a) == 0 {
 		return fmt.Errorf("Encoding error: %d", pic.error_code)
 	}
-
 	return
 }
 
