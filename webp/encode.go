@@ -19,7 +19,7 @@ static int webpEncodeYUVA(const WebPConfig *config, WebPPicture *picture, uint8_
 	picture->y = y;
 	picture->u = u;
 	picture->v = v;
-	if (picture->colorspace = WEBP_YUV420A) {
+	if (picture->colorspace == WEBP_YUV420A) {
 		picture->a = a;
 	}
 	picture->writer = (WebPWriterFunction)writeWebP;
