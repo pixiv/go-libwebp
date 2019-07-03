@@ -143,7 +143,7 @@ func ConfigLosslessPreset(level int) (*Config, error) {
 // SetLossless sets lossless parameter that specifies whether to enable lossless
 // encoding.
 func (c *Config) SetLossless(v bool) {
-	c.c.autofilter = boolToValue(v)
+	c.c.lossless = boolToValue(v)
 }
 
 // Lossless returns lossless parameter flag whether to enable lossless encoding.
