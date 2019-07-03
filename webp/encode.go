@@ -131,6 +131,9 @@ func ConfigPreset(preset Preset, quality float32) (*Config, error) {
 // compression) and 9 (slower, best compression).
 func ConfigLosslessPreset(level int) (*Config, error) {
 	c := &Config{}
+	if C.WebPConfigPreset(&c.c, C.WebPPreset(PresetDefault), C.float(0)) == 0 {
+		return nil, errors.New("failed to initialize webp config")
+	}
 	if C.webPConfigLosslessPreset(&c.c, C.int(level)) == 0 {
 		return nil, errors.New("failed to initialize webp config")
 	}
