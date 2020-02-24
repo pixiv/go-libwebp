@@ -21,15 +21,15 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	"time"
 	"image"
+	"time"
 	"unsafe"
 )
 
 // AnimationEncoder encodes multiple images into an animated WebP.
 type AnimationEncoder struct {
-	opts C.WebPAnimEncoderOptions
-	c *C.WebPAnimEncoder
+	opts     C.WebPAnimEncoderOptions
+	c        *C.WebPAnimEncoder
 	duration time.Duration
 }
 
@@ -82,7 +82,9 @@ func (ae *AnimationEncoder) AddFrame(img image.Image, duration time.Duration) er
 		return errors.New("unsupported image type")
 	}
 
-	timestamp := C.int((duration + ae.duration) / time.Millisecond)
+	timestamp := C.int(ae.duration / time.Millisecond)
+	ae.duration += duration
+
 	if C.WebPAnimEncoderAdd(ae.c, pic, timestamp, nil) == 0 {
 		return fmt.Errorf(
 			"Encoding error: %d - %s",
@@ -91,14 +93,13 @@ func (ae *AnimationEncoder) AddFrame(img image.Image, duration time.Duration) er
 		)
 	}
 
-	ae.duration += duration
 	return nil
 }
 
 // Assemble assembles all frames into animated WebP.
 func (ae *AnimationEncoder) Assemble() ([]byte, error) {
 	// add final empty frame
-	if C.WebPAnimEncoderAdd(ae.c, nil, C.int(ae.duration / time.Millisecond), nil) == 0 {
+	if C.WebPAnimEncoderAdd(ae.c, nil, C.int(ae.duration/time.Millisecond), nil) == 0 {
 		return nil, errors.New("Couldn't add final empty frame")
 	}
 
