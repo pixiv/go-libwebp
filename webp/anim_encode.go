@@ -1,6 +1,8 @@
 package webp
 
 /*
+#cgo LDFLAGS: -lwebpmux
+
 #include <stdlib.h>
 #include <string.h>
 #include <webp/encode.h>

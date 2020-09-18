@@ -16,7 +16,7 @@ $(libwebp_so):
 	&& wget http://downloads.webmproject.org/releases/webp/libwebp-$(LIBWEBP_VERSION).tar.gz \
 	&& tar xf libwebp-$(LIBWEBP_VERSION).tar.gz \
 	&& cd libwebp-$(LIBWEBP_VERSION) \
-	&& ./configure --prefix=$(LIBWEBP_PREFIX) \
+	&& ./configure --prefix=$(LIBWEBP_PREFIX) --enable-libwebpmux \
 	&& make \
 	&& make install
 

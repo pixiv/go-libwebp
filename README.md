@@ -8,7 +8,7 @@ A implementation of Go binding for [libwebp](https://developers.google.com/speed
 
 ## Dependencies
 
-- libwebp 0.4, 0.5
+- libwebp 0.4, 0.5+, compiled with `--enable-libwebpmux`
 
 ## Usage
 
@@ -76,10 +76,66 @@ func main() {
 }
 ```
 
+
+### Encoding animations from a series of frames
+
+```
+package main
+
+import (
+	"image"
+	"time"
+
+	"github.com/harukasan/go-libwebp/test/util"
+	"github.com/harukasan/go-libwebp/webp"
+)
+
+func main() {
+	// Get some frames
+	img := []image.Image{
+		util.ReadPNG("butterfly.png"),
+		util.ReadPNG("checkerboard.png"),
+		util.ReadPNG("yellow-rose-3.png"),
+	}
+
+	// Initialize the animation encoder
+	width, height := 24, 24
+	anim, err := webp.NewAnimationEncoder(width, height, 0, 0)
+	if err != nil {
+		panic(err)
+	}
+	defer anim.Close()
+
+	// Add each frame to the animation
+	for i, im := range img {
+		// all frames of an animation must have the same dimensions
+		cropped := im.(interface {
+			SubImage(r image.Rectangle) image.Image
+		}).SubImage(image.Rect(0, 0, width, height))
+
+		if err := anim.AddFrame(cropped, 100*time.Millisecond); err != nil {
+			panic(err)
+		}
+	}
+
+	// Assemble the final animation
+	buf, err := anim.Assemble()
+	if err != nil {
+		panic(err)
+	}
+
+	// Write to disk
+	f := util.CreateFile("animation.webp")
+	defer f.Close()
+	f.Write(buf)
+}
+
+```
+
 ## TODO
 
 - Incremental decoding API
-- Container API (Animation)
+- Animation decoding
 
 ## License
 
