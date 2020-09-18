@@ -8,7 +8,7 @@ A implementation of Go binding for [libwebp](https://developers.google.com/speed
 
 ## Dependencies
 
-- libwebp 0.4, 0.5+, compiled with `--enable-libwebpmux`
+- libwebp 0.5+, compiled with `--enable-libwebpmux`
 
 ## Usage
 
