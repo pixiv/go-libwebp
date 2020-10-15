@@ -135,7 +135,6 @@ func main() {
 ## TODO
 
 - Incremental decoding API
-- Animation decoding
 
 ## License
 
