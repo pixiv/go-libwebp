@@ -8,8 +8,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/harukasan/go-libwebp/test/util"
-	"github.com/harukasan/go-libwebp/webp"
+	"github.com/tidbyt/go-libwebp/test/util"
+	"github.com/tidbyt/go-libwebp/webp"
 )
 
 func TestMain(m *testing.M) {

@@ -10,29 +10,24 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // GetExFilePath returns the path of specified example file.
 func GetExFilePath(name string) string {
-	for _, gopath := range strings.Split(os.Getenv("GOPATH"), ":") {
-		path := filepath.Join(gopath, "src/github.com/harukasan/go-libwebp/examples/images", name)
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
+	path := filepath.Join("../examples/images", name)
+	if _, err := os.Stat(path); err == nil {
+		return path
 	}
-	panic(fmt.Errorf("%v does not exist in any directory which contains in $GOPATH", name))
+	panic(fmt.Errorf("%v does not exist", path))
 }
 
 // GetOutFilePath returns the path of specified out file.
 func GetOutFilePath(name string) string {
-	for _, gopath := range strings.Split(os.Getenv("GOPATH"), ":") {
-		path := filepath.Join(gopath, "src/github.com/harukasan/go-libwebp/examples/out")
-		if _, err := os.Stat(path); err == nil {
-			return filepath.Join(path, name)
-		}
+	path := "../examples/out"
+	if _, err := os.Stat(path); err == nil {
+		return filepath.Join(path, name)
 	}
-	panic(fmt.Errorf("out directory does not exist in any directory which contains in $GOPATH"))
+	panic(fmt.Errorf("out directory does not exist"))
 }
 
 // OpenFile opens specified example file

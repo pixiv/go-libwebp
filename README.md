@@ -1,8 +1,7 @@
 go-libwebp
 ==========
 
-[![Build Status](https://travis-ci.org/harukasan/go-libwebp.svg?branch=master)](https://travis-ci.org/harukasan/go-libwebp)
-[![GoDoc](https://godoc.org/github.com/harukasan/go-libwebp/webp?status.svg)](https://godoc.org/github.com/harukasan/go-libwebp/webp)
+[![GoDoc](https://godoc.org/github.com/tidbyt/go-libwebp/webp?status.svg)](https://godoc.org/github.com/tidbyt/go-libwebp/webp)
 
 A implementation of Go binding for [libwebp](https://developers.google.com/speed/webp/docs/api).
 
@@ -20,8 +19,8 @@ The [examples](./examples) directory contains example codes and images.
 package main
 
 import (
-	"github.com/harukasan/go-libwebp/test/util"
-	"github.com/harukasan/go-libwebp/webp"
+	"github.com/tidbyt/go-libwebp/test/util"
+	"github.com/tidbyt/go-libwebp/webp"
 )
 
 func main() {
@@ -52,8 +51,8 @@ import (
 	"bufio"
 	"image"
 
-	"github.com/harukasan/go-libwebp/test/util"
-	"github.com/harukasan/go-libwebp/webp"
+	"github.com/tidbyt/go-libwebp/test/util"
+	"github.com/tidbyt/go-libwebp/webp"
 )
 
 func main() {
@@ -86,8 +85,8 @@ import (
 	"image"
 	"time"
 
-	"github.com/harukasan/go-libwebp/test/util"
-	"github.com/harukasan/go-libwebp/webp"
+	"github.com/tidbyt/go-libwebp/test/util"
+	"github.com/tidbyt/go-libwebp/webp"
 )
 
 func main() {
