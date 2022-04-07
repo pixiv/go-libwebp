@@ -25,7 +25,7 @@ type YUVAImage struct {
 
 // NewYUVAImage creates and allocates image buffer.
 func NewYUVAImage(r image.Rectangle, c ColorSpace) (image *YUVAImage) {
-	yw, yh := r.Dx(), r.Dx()
+	yw, yh := r.Dx(), r.Dy()
 	cw, ch := ((r.Max.X+1)/2 - r.Min.X/2), ((r.Max.Y+1)/2 - r.Min.Y/2)
 
 	switch c {
