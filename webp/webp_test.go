@@ -109,6 +109,26 @@ func TestDecodeRGBA(t *testing.T) {
 	}
 }
 
+func TestDecodeNRGBA(t *testing.T) {
+	files := []string{
+		"cosmos.webp",
+		"butterfly.webp",
+		"kinkaku.webp",
+		"yellow-rose-3.webp",
+	}
+
+	for _, file := range files {
+		data := util.ReadFile(file)
+		options := &webp.DecoderOptions{}
+
+		_, err := webp.DecodeNRGBA(data, options)
+		if err != nil {
+			t.Errorf("Got Error: %v", err)
+			return
+		}
+	}
+}
+
 func TestDecodeRGBAWithCropping(t *testing.T) {
 	data := util.ReadFile("cosmos.webp")
 	crop := image.Rect(100, 100, 300, 200)

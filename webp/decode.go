@@ -126,7 +126,7 @@ func DecodeYUVA(data []byte, options *DecoderOptions) (img *YUVAImage, err error
 	return
 }
 
-// DecodeRGBA decodes WebP image into RGBA image and returns it as an *image.RGBA.
+// DecodeRGBA decodes WebP image into rgbA image and returns it as an *image.RGBA.
 func DecodeRGBA(data []byte, options *DecoderOptions) (img *image.RGBA, err error) {
 	config, err := initDecoderConfig(options)
 	if err != nil {
@@ -144,6 +144,43 @@ func DecodeRGBA(data []byte, options *DecoderOptions) (img *image.RGBA, err erro
 	// Allocate output image
 	outWidth, outHeight := calcOutputSize(config)
 	img = image.NewRGBA(image.Rect(0, 0, outWidth, outHeight))
+
+	// Set up output configurations
+	config.output.colorspace = C.MODE_rgbA
+	config.output.is_external_memory = 1
+
+	// Allocate WebPRGBABuffer and fill in the pointers to output image
+	buf := (*C.WebPRGBABuffer)(unsafe.Pointer(&config.output.u[0]))
+	buf.rgba = (*C.uint8_t)(&img.Pix[0])
+	buf.stride = C.int(img.Stride)
+	buf.size = (C.size_t)(len(img.Pix))
+
+	// Decode
+	if status := C.WebPDecode(cDataPtr, cDataSize, config); status != C.VP8_STATUS_OK {
+		return nil, fmt.Errorf("Could not decode data stream, return %s", statusString(status))
+	}
+
+	return
+}
+
+// DecodeNRGBA decodes WebP image into RGBA image and returns it as an *image.NRGBA.
+func DecodeNRGBA(data []byte, options *DecoderOptions) (img *image.NRGBA, err error) {
+	config, err := initDecoderConfig(options)
+	if err != nil {
+		return nil, err
+	}
+
+	cDataPtr := (*C.uint8_t)(&data[0])
+	cDataSize := (C.size_t)(len(data))
+
+	// Retrive WebP features
+	if status := C.WebPGetFeatures(cDataPtr, cDataSize, &config.input); status != C.VP8_STATUS_OK {
+		return nil, fmt.Errorf("Could not get features from the data stream, return %s", statusString(status))
+	}
+
+	// Allocate output image
+	outWidth, outHeight := calcOutputSize(config)
+	img = image.NewNRGBA(image.Rect(0, 0, outWidth, outHeight))
 
 	// Set up output configurations
 	config.output.colorspace = C.MODE_RGBA
