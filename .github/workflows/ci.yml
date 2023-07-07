@@ -26,6 +26,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go-version }}
+          cache: false
       - name: set environment variables
         shell: bash
         run: |
