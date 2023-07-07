@@ -1,8 +1,8 @@
 go-libwebp
 ==========
 
-[![Build Status](https://travis-ci.org/harukasan/go-libwebp.svg?branch=master)](https://travis-ci.org/harukasan/go-libwebp)
-[![GoDoc](https://godoc.org/github.com/harukasan/go-libwebp/webp?status.svg)](https://godoc.org/github.com/harukasan/go-libwebp/webp)
+[![ci](https://github.com/pixiv/go-libwebp/actions/workflows/ci.yml/badge.svg)](https://github.com/pixiv/go-libwebp/actions/workflows/ci.yml)
+[![GoDoc](https://godoc.org/github.com/pixiv/go-libwebp/webp?status.svg)](https://godoc.org/github.com/pixiv/go-libwebp/webp)
 
 A implementation of Go binding for [libwebp](https://developers.google.com/speed/webp/docs/api).
 
