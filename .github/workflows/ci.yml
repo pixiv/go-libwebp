@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    strategy:
+      matrix:
+        libwebp-version: ['0.4.1', '0.4.2', '0.4.3', '0.5.0', '0.5.1']
+        go-version: ['~1.18', '~1.19', '~1.20']
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: ~/cache
+          key: "1-${{ runner.os }}-${{ matrix.libwebp-version }}"
+      - name: setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: false
+      - name: set environment variables
+        shell: bash
+        run: |
+          mkdir -p $HOME/cache
+          echo "CGO_CFLAGS=-I $HOME/cache/libwebp-${{ matrix.libwebp-version }}/include" >> $GITHUB_ENV
+          echo "CGO_LDFLAGS=-L $HOME/cache/libwebp-${{ matrix.libwebp-version }}/lib" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$HOME/cache/libwebp-${{ matrix.libwebp-version }}/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+      - name: build libwebp
+        run: LIBWEBP_PREFIX=$HOME/cache/libwebp-${{ matrix.libwebp-version }} make libwebp
+      - name: test
+        run: make test

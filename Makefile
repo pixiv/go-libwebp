@@ -7,7 +7,7 @@ LIBWEBP_VERSION ?= 0.5.1
 all: test
 
 test:
-	go test -v $(repo)/...
+	go test -v ./...
 
 libwebp: $(libwebp_so)
 
