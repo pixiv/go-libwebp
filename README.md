@@ -83,8 +83,5 @@ func main() {
 
 ## License
 
-Copyright (c) 2016 MICHII Shunsuke. All rights reserved.
-Copyright (c) 2023 pixiv Inc. All rights reserved.
-
 This library is released under The BSD 2-Clause License.
 See [LICENSE](./LICENSE).
