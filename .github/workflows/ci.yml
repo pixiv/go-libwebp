@@ -14,6 +14,7 @@ jobs:
       matrix:
         libwebp-version: ['1.3.0', '1.3.1']
         go-version: ['~1.18', '~1.19', '~1.20']
+        extldflags: ['', '-static']
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -34,6 +35,7 @@ jobs:
           echo "CGO_CFLAGS=-I $HOME/cache/libwebp-${{ matrix.libwebp-version }}/include" >> $GITHUB_ENV
           echo "CGO_LDFLAGS=-L $HOME/cache/libwebp-${{ matrix.libwebp-version }}/lib" >> $GITHUB_ENV
           echo "LD_LIBRARY_PATH=$HOME/cache/libwebp-${{ matrix.libwebp-version }}/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "GOLIBWEBP_EXTLDFLAGS=${{ matrix.extldflags }}" >> $GITHUB_ENV
       - name: build libwebp
         run: LIBWEBP_PREFIX=$HOME/cache/libwebp-${{ matrix.libwebp-version }} make libwebp
       - name: test

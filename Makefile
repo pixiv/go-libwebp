@@ -7,7 +7,7 @@ LIBWEBP_VERSION ?= 1.3.1
 all: test
 
 test:
-	go test -v ./...
+	go test -v --ldflags "-extldflags '$(GOLIBWEBP_EXTLDFLAGS)'" ./...
 
 libwebp: $(libwebp_so)
 
