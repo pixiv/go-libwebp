@@ -10,7 +10,7 @@ ENV LIBWEBP_PREFIX="/usr/local" \
 RUN cd /tmp/go-libwebp && make libwebp
 
 ENV GOPATH="/go" \
-    WORKDIR="/go/src/github.com/harukasan/go-libwebp" \
+    WORKDIR="/go/src/github.com/pixiv/go-libwebp" \
     PATH="/go/bin:/usr/local/go/bin:$PATH" \
     CGO_CFLAGS="-I /usr/local/include"  \
     CGO_LDFLAGS="-L /usr/local/lib" \

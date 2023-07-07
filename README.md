@@ -20,8 +20,8 @@ The [examples](./examples) directory contains example codes and images.
 package main
 
 import (
-	"github.com/harukasan/go-libwebp/test/util"
-	"github.com/harukasan/go-libwebp/webp"
+	"github.com/pixiv/go-libwebp/test/util"
+	"github.com/pixiv/go-libwebp/webp"
 )
 
 func main() {
@@ -52,8 +52,8 @@ import (
 	"bufio"
 	"image"
 
-	"github.com/harukasan/go-libwebp/test/util"
-	"github.com/harukasan/go-libwebp/webp"
+	"github.com/pixiv/go-libwebp/test/util"
+	"github.com/pixiv/go-libwebp/webp"
 )
 
 func main() {
@@ -82,8 +82,6 @@ func main() {
 - Container API (Animation)
 
 ## License
-
-Copyright (c) 2016 MICHII Shunsuke. All rights reserved.
 
 This library is released under The BSD 2-Clause License.
 See [LICENSE](./LICENSE).
