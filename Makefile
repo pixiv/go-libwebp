@@ -2,12 +2,12 @@ repo = github.com/pixiv/go-libwebp
 build_dir = /tmp
 cur_dir = $(shell pwd)
 libwebp_so = ${LIBWEBP_PREFIX}/lib/libwebp.so
-LIBWEBP_VERSION ?= 0.5.1
+LIBWEBP_VERSION ?= 1.3.1
 
 all: test
 
 test:
-	go test -v ./...
+	go test -v --ldflags "-extldflags '$(GOLIBWEBP_EXTLDFLAGS)'" ./...
 
 libwebp: $(libwebp_so)
 
