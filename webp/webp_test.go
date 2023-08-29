@@ -2,6 +2,7 @@ package webp_test
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -221,6 +222,34 @@ func TestEncodeRGBAWithProgress(t *testing.T) {
 	}
 }
 
+func TestEncodeRGBAWithProgressCanceled(t *testing.T) {
+	img := util.ReadPNG("yellow-rose-3.png")
+	if _, ok := img.(*image.NRGBA); !ok {
+		t.Fatalf("image is not NRGBA: %v", reflect.TypeOf(img))
+	}
+
+	config, err := webp.ConfigPreset(webp.PresetDefault, 100)
+	if err != nil {
+		t.Fatalf("got error: %v", err)
+	}
+
+	f := util.CreateFile("TestEncodeRGBAWithProgress.webp")
+	w := bufio.NewWriter(f)
+	defer func() {
+		w.Flush()
+		f.Close()
+	}()
+
+	var encodeErr *webp.EncodeError
+	if err := webp.EncodeRGBAWithProgress(w, img, config, func(i int) bool {
+		t.Logf("Progress: %v", i)
+		return false
+	}); !errors.As(err, &encodeErr) || encodeErr.EncodeErrorCode() != webp.EncodeErrorCodeVP8EncErrorUserAbort {
+		t.Errorf("Expected UserAbort (%v) but received: %v", webp.EncodeErrorCodeVP8EncErrorUserAbort, err)
+		return
+	}
+}
+
 func convertToRGBImage(t *testing.T, origImg image.Image) *webp.RGBImage {
 	bounds := origImg.Bounds()
 	img := webp.NewRGBImage(bounds)
@@ -284,6 +313,32 @@ func TestEncodeRGBWithProgress(t *testing.T) {
 	}
 }
 
+func TestEncodeRGBWithProgressCanceled(t *testing.T) {
+	origImg := util.ReadPNG("yellow-rose-3.png")
+	img := convertToRGBImage(t, origImg)
+
+	config, err := webp.ConfigPreset(webp.PresetDefault, 100)
+	if err != nil {
+		t.Fatalf("got error: %v", err)
+	}
+
+	f := util.CreateFile("TestEncodeRGBWithProgress.webp")
+	w := bufio.NewWriter(f)
+	defer func() {
+		w.Flush()
+		f.Close()
+	}()
+
+	var encodeErr *webp.EncodeError
+	if err := webp.EncodeRGBAWithProgress(w, img, config, func(i int) bool {
+		t.Logf("Progress: %v", i)
+		return false
+	}); !errors.As(err, &encodeErr) || encodeErr.EncodeErrorCode() != webp.EncodeErrorCodeVP8EncErrorUserAbort {
+		t.Errorf("Expected UserAbort (%v) but received: %v", webp.EncodeErrorCodeVP8EncErrorUserAbort, err)
+		return
+	}
+}
+
 func TestEncodeYUVA(t *testing.T) {
 	data := util.ReadFile("cosmos.webp")
 	options := &webp.DecoderOptions{}
@@ -343,6 +398,38 @@ func TestEncodeYUVAWithProgress(t *testing.T) {
 	}
 }
 
+func TestEncodeYUVAWithProgressCanceled(t *testing.T) {
+	data := util.ReadFile("cosmos.webp")
+	options := &webp.DecoderOptions{}
+
+	img, err := webp.DecodeYUVA(data, options)
+	if err != nil {
+		t.Errorf("Got Error: %v in decoding", err)
+		return
+	}
+
+	f := util.CreateFile("TestEncodeYUVA.webp")
+	w := bufio.NewWriter(f)
+	defer func() {
+		w.Flush()
+		f.Close()
+	}()
+
+	config, err := webp.ConfigPreset(webp.PresetDefault, 100)
+	if err != nil {
+		t.Fatalf("got error: %v", err)
+	}
+
+	var encodeErr *webp.EncodeError
+	if err := webp.EncodeYUVAWithProgress(w, img, config, func(i int) bool {
+		t.Logf("Progress: %v", i)
+		return false
+	}); !errors.As(err, &encodeErr) || encodeErr.EncodeErrorCode() != webp.EncodeErrorCodeVP8EncErrorUserAbort {
+		t.Errorf("Expected UserAbort (%v) but received: %v", webp.EncodeErrorCodeVP8EncErrorUserAbort, err)
+		return
+	}
+}
+
 func TestEncodeGray(t *testing.T) {
 	p := image.NewGray(image.Rect(0, 0, 1, 10))
 	for i := 0; i < 10; i++ {
@@ -390,6 +477,34 @@ func TestEncodeGrayWithProgress(t *testing.T) {
 		return true
 	}); err != nil {
 		t.Errorf("Got Error: %v", err)
+		return
+	}
+}
+
+func TestEncodeGrayWithProgressCanceled(t *testing.T) {
+	p := image.NewGray(image.Rect(0, 0, 1, 10))
+	for i := 0; i < 10; i++ {
+		p.SetGray(0, i, color.Gray{uint8(float32(i) / 10 * 255)})
+	}
+
+	f := util.CreateFile("TestEncodeGray.webp")
+	w := bufio.NewWriter(f)
+	defer func() {
+		w.Flush()
+		f.Close()
+	}()
+
+	config, err := webp.ConfigPreset(webp.PresetDefault, 100)
+	if err != nil {
+		t.Fatalf("got error: %v", err)
+	}
+
+	var encodeErr *webp.EncodeError
+	if err := webp.EncodeGrayWithProgress(w, p, config, func(i int) bool {
+		t.Logf("Progress: %v", i)
+		return false
+	}); !errors.As(err, &encodeErr) || encodeErr.EncodeErrorCode() != webp.EncodeErrorCodeVP8EncErrorUserAbort {
+		t.Errorf("Expected UserAbort (%v) but received: %v", webp.EncodeErrorCodeVP8EncErrorUserAbort, err)
 		return
 	}
 }

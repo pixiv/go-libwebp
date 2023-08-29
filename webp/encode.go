@@ -121,12 +121,49 @@ type Config struct {
 
 type ProgressHook func(int) bool
 
+type EncodeError struct {
+	encodeErrorCode EncodeErrorCode
+}
+
+func (e *EncodeError) Error() string {
+	return fmt.Sprintf("Encoding error: %d", e.encodeErrorCode)
+}
+
+func (e *EncodeError) EncodeErrorCode() EncodeErrorCode {
+	return e.encodeErrorCode
+}
+
+var _ error = &EncodeError{}
+
+type EncodeErrorCode int
+
+const (
+	EncodeErrorCodeVP8EncOK                        EncodeErrorCode = C.VP8_ENC_OK
+	EncodeErrorCodeVP8EncErrorOutOfMemory          EncodeErrorCode = C.VP8_ENC_ERROR_OUT_OF_MEMORY
+	EncodeErrorCodeVP8EncErrorBitstreamOutOfMemory EncodeErrorCode = C.VP8_ENC_ERROR_BITSTREAM_OUT_OF_MEMORY
+	EncodeErrorCodeVP8EncErrorNullParameter        EncodeErrorCode = C.VP8_ENC_ERROR_NULL_PARAMETER
+	EncodeErrorCodeVP8EncErrorInvalidConfiguration EncodeErrorCode = C.VP8_ENC_ERROR_INVALID_CONFIGURATION
+	EncodeErrorCodeVP8EncErrorBadDimension         EncodeErrorCode = C.VP8_ENC_ERROR_BAD_DIMENSION
+	EncodeErrorCodeVP8EncErrorPartition0Overflow   EncodeErrorCode = C.VP8_ENC_ERROR_PARTITION0_OVERFLOW
+	EncodeErrorCodeVP8EncErrorPartitionOverflow    EncodeErrorCode = C.VP8_ENC_ERROR_PARTITION_OVERFLOW
+	EncodeErrorCodeVP8EncErrorBadWrite             EncodeErrorCode = C.VP8_ENC_ERROR_BAD_WRITE
+	EncodeErrorCodeVP8EncErrorFileTooBig           EncodeErrorCode = C.VP8_ENC_ERROR_FILE_TOO_BIG
+	EncodeErrorCodeVP8EncErrorUserAbort            EncodeErrorCode = C.VP8_ENC_ERROR_USER_ABORT
+	EncodeErrorCodeVP8ErrorLast                    EncodeErrorCode = C.VP8_ENC_ERROR_LAST
+)
+
+var errWebPPictureAllocate = errors.New("Could not allocate webp picture")
+var errWebPPictureInitialize = errors.New("Could not initialize webp picture")
+var errUnsupportedImageType = errors.New("unsupported image type")
+var errInvalidConfiguration = errors.New("invalid configuration")
+var errInitializeWebPConfig = errors.New("failed to initialize webp config")
+
 // ConfigPreset returns initialized configuration with given preset and quality
 // factor.
 func ConfigPreset(preset Preset, quality float32) (*Config, error) {
 	c := &Config{}
 	if C.WebPConfigPreset(&c.c, C.WebPPreset(preset), C.float(quality)) == 0 {
-		return nil, errors.New("failed to initialize webp config")
+		return nil, errInitializeWebPConfig
 	}
 	return c, nil
 }
@@ -137,10 +174,10 @@ func ConfigPreset(preset Preset, quality float32) (*Config, error) {
 func ConfigLosslessPreset(level int) (*Config, error) {
 	c := &Config{}
 	if C.WebPConfigPreset(&c.c, C.WebPPreset(PresetDefault), C.float(0)) == 0 {
-		return nil, errors.New("failed to initialize webp config")
+		return nil, errInitializeWebPConfig
 	}
 	if C.webPConfigLosslessPreset(&c.c, C.int(level)) == 0 {
-		return nil, errors.New("failed to initialize webp config")
+		return nil, errInitializeWebPConfig
 	}
 	return c, nil
 }
@@ -495,7 +532,7 @@ func EncodeRGBAWithProgress(w io.Writer, img image.Image, c *Config, progressHoo
 
 	pic := C.calloc_WebPPicture()
 	if pic == nil {
-		return errors.New("Could not allocate webp picture")
+		return errWebPPictureAllocate
 	}
 	defer C.free_WebPPicture(pic)
 
@@ -503,7 +540,7 @@ func EncodeRGBAWithProgress(w io.Writer, img image.Image, c *Config, progressHoo
 	defer releaseDestinationManager(pic)
 
 	if C.WebPPictureInit(pic) == 0 {
-		return errors.New("Could not initialize webp picture")
+		return errWebPPictureInitialize
 	}
 	defer C.WebPPictureFree(pic)
 
@@ -523,11 +560,11 @@ func EncodeRGBAWithProgress(w io.Writer, img image.Image, c *Config, progressHoo
 	case *image.NRGBA:
 		C.WebPPictureImportRGBA(pic, (*C.uint8_t)(&p.Pix[0]), C.int(p.Stride))
 	default:
-		return errors.New("unsupported image type")
+		return errUnsupportedImageType
 	}
 
 	if C.WebPEncode(&c.c, pic) == 0 {
-		return fmt.Errorf("Encoding error: %d", pic.error_code)
+		return &EncodeError{encodeErrorCode: EncodeErrorCode(pic.error_code)}
 	}
 
 	return
@@ -547,7 +584,7 @@ func EncodeGrayWithProgress(w io.Writer, p *image.Gray, c *Config, progressHook 
 
 	pic := C.calloc_WebPPicture()
 	if pic == nil {
-		return errors.New("Could not allocate webp picture")
+		return errWebPPictureAllocate
 	}
 	defer C.free_WebPPicture(pic)
 
@@ -555,7 +592,7 @@ func EncodeGrayWithProgress(w io.Writer, p *image.Gray, c *Config, progressHook 
 	defer releaseDestinationManager(pic)
 
 	if C.WebPPictureInit(pic) == 0 {
-		return errors.New("Could not initialize webp picture")
+		return errWebPPictureInitialize
 	}
 	defer C.WebPPictureFree(pic)
 
@@ -565,7 +602,7 @@ func EncodeGrayWithProgress(w io.Writer, p *image.Gray, c *Config, progressHook 
 	pic.y_stride = C.int(p.Stride)
 
 	if C.webpEncodeGray(&c.c, pic, (*C.uint8_t)(&p.Pix[0])) == 0 {
-		return fmt.Errorf("Encoding error: %d", pic.error_code)
+		return &EncodeError{encodeErrorCode: EncodeErrorCode(pic.error_code)}
 	}
 
 	return
@@ -585,7 +622,7 @@ func EncodeYUVAWithProgress(w io.Writer, img *YUVAImage, c *Config, progressHook
 
 	pic := C.calloc_WebPPicture()
 	if pic == nil {
-		return errors.New("Could not allocate webp picture")
+		return errWebPPictureAllocate
 	}
 	defer C.free_WebPPicture(pic)
 
@@ -593,7 +630,7 @@ func EncodeYUVAWithProgress(w io.Writer, img *YUVAImage, c *Config, progressHook
 	defer releaseDestinationManager(pic)
 
 	if C.WebPPictureInit(pic) == 0 {
-		return errors.New("Could not initialize webp picture")
+		return errWebPPictureInitialize
 	}
 	defer C.WebPPictureFree(pic)
 
@@ -611,14 +648,14 @@ func EncodeYUVAWithProgress(w io.Writer, img *YUVAImage, c *Config, progressHook
 	}
 
 	if C.webpEncodeYUVA(&c.c, pic, y, u, v, a) == 0 {
-		return fmt.Errorf("Encoding error: %d", pic.error_code)
+		return &EncodeError{encodeErrorCode: EncodeErrorCode(pic.error_code)}
 	}
 	return
 }
 
 func validateConfig(c *Config) error {
 	if C.WebPValidateConfig(&c.c) == 0 {
-		return errors.New("invalid configuration")
+		return errInvalidConfiguration
 	}
 	return nil
 }
