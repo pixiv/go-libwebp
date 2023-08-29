@@ -5,7 +5,8 @@ package webp
 #include <string.h>
 #include <webp/encode.h>
 
-int writeWebP(uint8_t*, size_t, struct WebPPicture*);
+int golibwebpWriteWebP(uint8_t*, size_t, struct WebPPicture*);
+int golibwebpProgressHook(int, struct WebPPicture*);
 
 static WebPPicture *calloc_WebPPicture(void) {
 	return calloc(sizeof(WebPPicture), 1);
@@ -22,7 +23,8 @@ static int webpEncodeYUVA(const WebPConfig *config, WebPPicture *picture, uint8_
 	if (picture->colorspace == WEBP_YUV420A) {
 		picture->a = a;
 	}
-	picture->writer = (WebPWriterFunction)writeWebP;
+	picture->writer = (WebPWriterFunction)golibwebpWriteWebP;
+	picture->progress_hook = (WebPProgressHook)golibwebpProgressHook;
 
   return WebPEncode(config, picture);
 }
@@ -46,7 +48,8 @@ static int webpEncodeGray(const WebPConfig *config, WebPPicture *picture, uint8_
 	picture->u = chroma;
 	picture->v = chroma;
 	picture->uv_stride = c_stride;
-	picture->writer = (WebPWriterFunction)writeWebP;
+	picture->writer = (WebPWriterFunction)golibwebpWriteWebP;
+	picture->progress_hook = (WebPProgressHook)golibwebpProgressHook;
 
 	ok = WebPEncode(config, picture);
 
@@ -115,6 +118,8 @@ import (
 type Config struct {
 	c C.WebPConfig
 }
+
+type ProgressHook func(int) bool
 
 // ConfigPreset returns initialized configuration with given preset and quality
 // factor.
@@ -411,7 +416,8 @@ func valueToBool(v C.int) bool {
 }
 
 type destinationManager struct {
-	writer io.Writer
+	writer       io.Writer
+	progressHook ProgressHook
 }
 
 var destinationManagerMapMutex sync.RWMutex
@@ -424,8 +430,8 @@ func GetDestinationManagerMapLen() int {
 	return len(destinationManagerMap)
 }
 
-func makeDestinationManager(w io.Writer, pic *C.WebPPicture) (mgr *destinationManager) {
-	mgr = &destinationManager{writer: w}
+func makeDestinationManager(w io.Writer, progressHook ProgressHook, pic *C.WebPPicture) (mgr *destinationManager) {
+	mgr = &destinationManager{writer: w, progressHook: progressHook}
 	destinationManagerMapMutex.Lock()
 	defer destinationManagerMapMutex.Unlock()
 	destinationManagerMap[uintptr(unsafe.Pointer(pic))] = mgr
@@ -444,8 +450,8 @@ func getDestinationManager(pic *C.WebPPicture) *destinationManager {
 	return destinationManagerMap[uintptr(unsafe.Pointer(pic))]
 }
 
-//export writeWebP
-func writeWebP(data *C.uint8_t, size C.size_t, pic *C.WebPPicture) C.int {
+//export golibwebpWriteWebP
+func golibwebpWriteWebP(data *C.uint8_t, size C.size_t, pic *C.WebPPicture) C.int {
 	mgr := getDestinationManager(pic)
 	bytes := C.GoBytes(unsafe.Pointer(data), C.int(size))
 	_, err := mgr.writer.Write(bytes)
@@ -455,9 +461,34 @@ func writeWebP(data *C.uint8_t, size C.size_t, pic *C.WebPPicture) C.int {
 	return 1
 }
 
+//export golibwebpProgressHook
+func golibwebpProgressHook(percent C.int, pic *C.WebPPicture) C.int {
+	mgr := getDestinationManager(pic)
+	shouldContinue := true
+	if mgr.progressHook != nil {
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					shouldContinue = false
+				}
+			}()
+			shouldContinue = mgr.progressHook(int(percent))
+		}()
+	}
+
+	return boolToValue(shouldContinue)
+}
+
 // EncodeRGBA encodes and writes image.Image into the writer as WebP.
 // Now supports image.RGBA or image.NRGBA.
 func EncodeRGBA(w io.Writer, img image.Image, c *Config) (err error) {
+	return EncodeRGBAWithProgress(w, img, c, nil)
+}
+
+// EncodeRGBAWithProgress encodes and writes image.Image into the writer as WebP.
+// Now supports image.RGBA or image.NRGBA.
+// This function accepts progress hook function and supports cancellation.
+func EncodeRGBAWithProgress(w io.Writer, img image.Image, c *Config, progressHook ProgressHook) (err error) {
 	if err = validateConfig(c); err != nil {
 		return
 	}
@@ -468,7 +499,7 @@ func EncodeRGBA(w io.Writer, img image.Image, c *Config) (err error) {
 	}
 	defer C.free_WebPPicture(pic)
 
-	makeDestinationManager(w, pic)
+	makeDestinationManager(w, progressHook, pic)
 	defer releaseDestinationManager(pic)
 
 	if C.WebPPictureInit(pic) == 0 {
@@ -481,7 +512,8 @@ func EncodeRGBA(w io.Writer, img image.Image, c *Config) (err error) {
 	pic.width = C.int(img.Bounds().Dx())
 	pic.height = C.int(img.Bounds().Dy())
 
-	pic.writer = C.WebPWriterFunction(C.writeWebP)
+	pic.progress_hook = C.WebPProgressHook(C.golibwebpProgressHook)
+	pic.writer = C.WebPWriterFunction(C.golibwebpWriteWebP)
 
 	switch p := img.(type) {
 	case *RGBImage:
@@ -501,7 +533,14 @@ func EncodeRGBA(w io.Writer, img image.Image, c *Config) (err error) {
 	return
 }
 
+// EncodeGray encodes and writes Gray Image data into the writer as WebP.
 func EncodeGray(w io.Writer, p *image.Gray, c *Config) (err error) {
+	return EncodeGrayWithProgress(w, p, c, nil)
+}
+
+// EncodeGrayWithProgress encodes and writes Gray Image data into the writer as WebP.
+// This function accepts progress hook function and supports cancellation.
+func EncodeGrayWithProgress(w io.Writer, p *image.Gray, c *Config, progressHook ProgressHook) (err error) {
 	if err = validateConfig(c); err != nil {
 		return
 	}
@@ -512,7 +551,7 @@ func EncodeGray(w io.Writer, p *image.Gray, c *Config) (err error) {
 	}
 	defer C.free_WebPPicture(pic)
 
-	makeDestinationManager(w, pic)
+	makeDestinationManager(w, progressHook, pic)
 	defer releaseDestinationManager(pic)
 
 	if C.WebPPictureInit(pic) == 0 {
@@ -534,6 +573,12 @@ func EncodeGray(w io.Writer, p *image.Gray, c *Config) (err error) {
 
 // EncodeYUVA encodes and writes YUVA Image data into the writer as WebP.
 func EncodeYUVA(w io.Writer, img *YUVAImage, c *Config) (err error) {
+	return EncodeYUVAWithProgress(w, img, c, nil)
+}
+
+// EncodeYUVAWithProgress encodes and writes YUVA Image data into the writer as WebP.
+// This function accepts progress hook function and supports cancellation.
+func EncodeYUVAWithProgress(w io.Writer, img *YUVAImage, c *Config, progressHook ProgressHook) (err error) {
 	if err = validateConfig(c); err != nil {
 		return
 	}
@@ -544,7 +589,7 @@ func EncodeYUVA(w io.Writer, img *YUVAImage, c *Config) (err error) {
 	}
 	defer C.free_WebPPicture(pic)
 
-	makeDestinationManager(w, pic)
+	makeDestinationManager(w, progressHook, pic)
 	defer releaseDestinationManager(pic)
 
 	if C.WebPPictureInit(pic) == 0 {

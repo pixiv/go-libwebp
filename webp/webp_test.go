@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/color"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/pixiv/go-libwebp/test/util"
@@ -171,6 +172,9 @@ func TestDecodeRGBAWithScaling(t *testing.T) {
 
 func TestEncodeRGBA(t *testing.T) {
 	img := util.ReadPNG("yellow-rose-3.png")
+	if _, ok := img.(*image.NRGBA); !ok {
+		t.Fatalf("image is not NRGBA: %v", reflect.TypeOf(img))
+	}
 
 	config, err := webp.ConfigPreset(webp.PresetDefault, 100)
 	if err != nil {
@@ -190,8 +194,52 @@ func TestEncodeRGBA(t *testing.T) {
 	}
 }
 
-func TestEncodeRGB(t *testing.T) {
+func TestEncodeRGBAWithProgress(t *testing.T) {
 	img := util.ReadPNG("yellow-rose-3.png")
+	if _, ok := img.(*image.NRGBA); !ok {
+		t.Fatalf("image is not NRGBA: %v", reflect.TypeOf(img))
+	}
+
+	config, err := webp.ConfigPreset(webp.PresetDefault, 100)
+	if err != nil {
+		t.Fatalf("got error: %v", err)
+	}
+
+	f := util.CreateFile("TestEncodeRGBAWithProgress.webp")
+	w := bufio.NewWriter(f)
+	defer func() {
+		w.Flush()
+		f.Close()
+	}()
+
+	if err := webp.EncodeRGBAWithProgress(w, img, config, func(i int) bool {
+		t.Logf("Progress: %v", i)
+		return true
+	}); err != nil {
+		t.Errorf("Got Error: %v", err)
+		return
+	}
+}
+
+func convertToRGBImage(t *testing.T, origImg image.Image) *webp.RGBImage {
+	bounds := origImg.Bounds()
+	img := webp.NewRGBImage(bounds)
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			rgba := origImg.At(x, y)
+			r, g, b, _ := rgba.RGBA()
+			img.Pix[y*img.Stride+x*3+0] = uint8(r >> 8)
+			img.Pix[y*img.Stride+x*3+1] = uint8(g >> 8)
+			img.Pix[y*img.Stride+x*3+2] = uint8(b >> 8)
+		}
+	}
+
+	return img
+}
+
+func TestEncodeRGB(t *testing.T) {
+	origImg := util.ReadPNG("yellow-rose-3.png")
+	img := convertToRGBImage(t, origImg)
 
 	config, err := webp.ConfigPreset(webp.PresetDefault, 100)
 	if err != nil {
@@ -206,6 +254,31 @@ func TestEncodeRGB(t *testing.T) {
 	}()
 
 	if err := webp.EncodeRGBA(w, img, config); err != nil {
+		t.Errorf("Got Error: %v", err)
+		return
+	}
+}
+
+func TestEncodeRGBWithProgress(t *testing.T) {
+	origImg := util.ReadPNG("yellow-rose-3.png")
+	img := convertToRGBImage(t, origImg)
+
+	config, err := webp.ConfigPreset(webp.PresetDefault, 100)
+	if err != nil {
+		t.Fatalf("got error: %v", err)
+	}
+
+	f := util.CreateFile("TestEncodeRGBWithProgress.webp")
+	w := bufio.NewWriter(f)
+	defer func() {
+		w.Flush()
+		f.Close()
+	}()
+
+	if err := webp.EncodeRGBAWithProgress(w, img, config, func(i int) bool {
+		t.Logf("Progress: %v", i)
+		return true
+	}); err != nil {
 		t.Errorf("Got Error: %v", err)
 		return
 	}
@@ -239,6 +312,37 @@ func TestEncodeYUVA(t *testing.T) {
 	}
 }
 
+func TestEncodeYUVAWithProgress(t *testing.T) {
+	data := util.ReadFile("cosmos.webp")
+	options := &webp.DecoderOptions{}
+
+	img, err := webp.DecodeYUVA(data, options)
+	if err != nil {
+		t.Errorf("Got Error: %v in decoding", err)
+		return
+	}
+
+	f := util.CreateFile("TestEncodeYUVA.webp")
+	w := bufio.NewWriter(f)
+	defer func() {
+		w.Flush()
+		f.Close()
+	}()
+
+	config, err := webp.ConfigPreset(webp.PresetDefault, 100)
+	if err != nil {
+		t.Fatalf("got error: %v", err)
+	}
+
+	if err := webp.EncodeYUVAWithProgress(w, img, config, func(i int) bool {
+		t.Logf("Progress: %v", i)
+		return true
+	}); err != nil {
+		t.Errorf("Got Error: %v", err)
+		return
+	}
+}
+
 func TestEncodeGray(t *testing.T) {
 	p := image.NewGray(image.Rect(0, 0, 1, 10))
 	for i := 0; i < 10; i++ {
@@ -258,6 +362,33 @@ func TestEncodeGray(t *testing.T) {
 	}
 
 	if err := webp.EncodeGray(w, p, config); err != nil {
+		t.Errorf("Got Error: %v", err)
+		return
+	}
+}
+
+func TestEncodeGrayWithProgress(t *testing.T) {
+	p := image.NewGray(image.Rect(0, 0, 1, 10))
+	for i := 0; i < 10; i++ {
+		p.SetGray(0, i, color.Gray{uint8(float32(i) / 10 * 255)})
+	}
+
+	f := util.CreateFile("TestEncodeGray.webp")
+	w := bufio.NewWriter(f)
+	defer func() {
+		w.Flush()
+		f.Close()
+	}()
+
+	config, err := webp.ConfigPreset(webp.PresetDefault, 100)
+	if err != nil {
+		t.Fatalf("got error: %v", err)
+	}
+
+	if err := webp.EncodeGrayWithProgress(w, p, config, func(i int) bool {
+		t.Logf("Progress: %v", i)
+		return true
+	}); err != nil {
 		t.Errorf("Got Error: %v", err)
 		return
 	}
