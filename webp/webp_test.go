@@ -233,7 +233,7 @@ func TestEncodeRGBAWithProgressCanceled(t *testing.T) {
 		t.Fatalf("got error: %v", err)
 	}
 
-	f := util.CreateFile("TestEncodeRGBAWithProgress.webp")
+	f := util.CreateFile("TestEncodeRGBAWithProgressCanceled.webp")
 	w := bufio.NewWriter(f)
 	defer func() {
 		w.Flush()
@@ -322,7 +322,7 @@ func TestEncodeRGBWithProgressCanceled(t *testing.T) {
 		t.Fatalf("got error: %v", err)
 	}
 
-	f := util.CreateFile("TestEncodeRGBWithProgress.webp")
+	f := util.CreateFile("TestEncodeRGBWithProgressCanceled.webp")
 	w := bufio.NewWriter(f)
 	defer func() {
 		w.Flush()
@@ -377,7 +377,7 @@ func TestEncodeYUVAWithProgress(t *testing.T) {
 		return
 	}
 
-	f := util.CreateFile("TestEncodeYUVA.webp")
+	f := util.CreateFile("TestEncodeYUVAWithProgress.webp")
 	w := bufio.NewWriter(f)
 	defer func() {
 		w.Flush()
@@ -408,7 +408,7 @@ func TestEncodeYUVAWithProgressCanceled(t *testing.T) {
 		return
 	}
 
-	f := util.CreateFile("TestEncodeYUVA.webp")
+	f := util.CreateFile("TestEncodeYUVAWithProgressCanceled.webp")
 	w := bufio.NewWriter(f)
 	defer func() {
 		w.Flush()
@@ -460,7 +460,7 @@ func TestEncodeGrayWithProgress(t *testing.T) {
 		p.SetGray(0, i, color.Gray{uint8(float32(i) / 10 * 255)})
 	}
 
-	f := util.CreateFile("TestEncodeGray.webp")
+	f := util.CreateFile("TestEncodeGrayWithProgress.webp")
 	w := bufio.NewWriter(f)
 	defer func() {
 		w.Flush()
@@ -487,7 +487,7 @@ func TestEncodeGrayWithProgressCanceled(t *testing.T) {
 		p.SetGray(0, i, color.Gray{uint8(float32(i) / 10 * 255)})
 	}
 
-	f := util.CreateFile("TestEncodeGray.webp")
+	f := util.CreateFile("TestEncodeGrayWithProgressCanceled.webp")
 	w := bufio.NewWriter(f)
 	defer func() {
 		w.Flush()
