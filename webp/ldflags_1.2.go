@@ -1,4 +1,4 @@
-//go:build 1.2.4
+//go:build !1.3
 
 package webp
 
