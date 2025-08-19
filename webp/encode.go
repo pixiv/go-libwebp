@@ -526,7 +526,7 @@ func EncodeRGBA(w io.Writer, img image.Image, c *Config) (err error) {
 // Now supports image.RGBA or image.NRGBA.
 // This function accepts progress hook function and supports cancellation.
 func EncodeRGBAWithProgress(w io.Writer, img image.Image, c *Config, progressHook ProgressHook) (err error) {
-	if err = validateConfig(c); err != nil {
+	if err = ValidateConfig(c); err != nil {
 		return
 	}
 
@@ -578,7 +578,7 @@ func EncodeGray(w io.Writer, p *image.Gray, c *Config) (err error) {
 // EncodeGrayWithProgress encodes and writes Gray Image data into the writer as WebP.
 // This function accepts progress hook function and supports cancellation.
 func EncodeGrayWithProgress(w io.Writer, p *image.Gray, c *Config, progressHook ProgressHook) (err error) {
-	if err = validateConfig(c); err != nil {
+	if err = ValidateConfig(c); err != nil {
 		return
 	}
 
@@ -616,7 +616,7 @@ func EncodeYUVA(w io.Writer, img *YUVAImage, c *Config) (err error) {
 // EncodeYUVAWithProgress encodes and writes YUVA Image data into the writer as WebP.
 // This function accepts progress hook function and supports cancellation.
 func EncodeYUVAWithProgress(w io.Writer, img *YUVAImage, c *Config, progressHook ProgressHook) (err error) {
-	if err = validateConfig(c); err != nil {
+	if err = ValidateConfig(c); err != nil {
 		return
 	}
 
@@ -653,7 +653,7 @@ func EncodeYUVAWithProgress(w io.Writer, img *YUVAImage, c *Config, progressHook
 	return
 }
 
-func validateConfig(c *Config) error {
+func ValidateConfig(c *Config) error {
 	if C.WebPValidateConfig(&c.c) == 0 {
 		return errInvalidConfiguration
 	}
