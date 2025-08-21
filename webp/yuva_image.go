@@ -13,7 +13,6 @@ import "image"
 // YCbCr image.
 //
 // See: http://en.wikipedia.org/wiki/YCbCr
-//
 type YUVAImage struct {
 	Y, Cb, Cr, A []uint8
 	YStride      int
