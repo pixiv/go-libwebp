@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         libwebp-version: ['1.3.2', '1.4.0', '1.5.0', '1.6.0']
-        go-version: ['~1.24', '~1.25']
+        go-version: ['~1.23', '~1.24', '~1.25']
         extldflags: ['', '-static']
     runs-on: ubuntu-latest
     steps:
