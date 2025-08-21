@@ -57,51 +57,6 @@ static int webpEncodeGray(const WebPConfig *config, WebPPicture *picture, uint8_
 
 	return ok;
 }
-
-static int webPConfigLosslessPreset(WebPConfig* webpConfig, int level) {
-#if WEBP_ENCODER_ABI_VERSION < 0x203
-	return 0;
-#else
-	return WebPConfigLosslessPreset(webpConfig, level);
-#endif
-}
-
-static int getNearLossless(WebPConfig* webpConfig, int* value) {
-#if WEBP_ENCODER_ABI_VERSION < 0x206
-	return 0;
-#else
-	*value = webpConfig->near_lossless;
-	return 1;
-#endif
-}
-
-static int setNearLossless(WebPConfig* webpConfig, int value) {
-#if WEBP_ENCODER_ABI_VERSION < 0x206
-	return 0;
-#else
-	webpConfig->near_lossless = value;
-	return 1;
-#endif
-}
-
-static int getExact(WebPConfig* webpConfig, int* value) {
-#if WEBP_ENCODER_ABI_VERSION < 0x209
-	return 0;
-#else
-	*value = webpConfig->exact;
-	return 1;
-#endif
-}
-
-static int setExact(WebPConfig* webpConfig, int value) {
-#if WEBP_ENCODER_ABI_VERSION < 0x209
-	return 0;
-#else
-	webpConfig->exact = value;
-	return 1;
-#endif
-}
-
 */
 import "C"
 
@@ -176,7 +131,7 @@ func ConfigLosslessPreset(level int) (*Config, error) {
 	if C.WebPConfigPreset(&c.c, C.WebPPreset(PresetDefault), C.float(0)) == 0 {
 		return nil, errInitializeWebPConfig
 	}
-	if C.webPConfigLosslessPreset(&c.c, C.int(level)) == 0 {
+	if C.WebPConfigLosslessPreset(&c.c, C.int(level)) == 0 {
 		return nil, errInitializeWebPConfig
 	}
 	return c, nil
@@ -407,35 +362,23 @@ func (c *Config) LowMemory() bool {
 // SetNearLossless sets near lossless encoding factor between 0 (max loss) and
 // 100 (disable near lossless encoding, default).
 func (c *Config) SetNearLossless(v int) {
-	if C.setNearLossless(&c.c, C.int(v)) == 0 {
-		panic("near_lossless parameter is not supported")
-	}
+	c.c.near_lossless = C.int(v)
 }
 
 // NearLossless returns near lossless encoding factor.
 func (c *Config) NearLossless() int {
-	var v C.int
-	if C.getNearLossless(&c.c, &v) == 0 {
-		panic("near_lossless parameter is not supported")
-	}
-	return int(v)
+	return int(c.c.near_lossless)
 }
 
 // SetExact sets the flag whether to preserve the exact RGB values under
 // transparent area.
 func (c *Config) SetExact(v bool) {
-	if C.setExact(&c.c, boolToValue(v)) == 0 {
-		panic("exact parameter is not supported")
-	}
+	c.c.exact = boolToValue(v)
 }
 
 // Exact returns exact flag.
 func (c *Config) Exact() bool {
-	var v C.int
-	if C.getExact(&c.c, &v) == 0 {
-		panic("exact parameter is not supported")
-	}
-	return valueToBool(v)
+	return valueToBool(c.c.exact)
 }
 
 func boolToValue(v bool) C.int {
