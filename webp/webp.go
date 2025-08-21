@@ -3,8 +3,6 @@
 package webp
 
 /*
-#cgo LDFLAGS: -lwebp -lsharpyuv -lm
-
 #include <stdlib.h>
 #include <webp/encode.h>
 
