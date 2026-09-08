@@ -12,102 +12,132 @@ import (
 	"github.com/pixiv/go-libwebp/webp/mux"
 )
 
-func TestGetICCProfileMissing(t *testing.T) {
+func TestGetChunkMissing(t *testing.T) {
 	data := util.ReadFile("cosmos.webp")
-	got, err := mux.GetICCProfile(data)
+	got, err := mux.GetChunk(data, mux.ICCP)
 	if err != nil {
-		t.Fatalf("GetICCProfile: %v", err)
+		t.Fatalf("GetChunk: %v", err)
 	}
 	if got != nil {
-		t.Errorf("GetICCProfile: got %d bytes, want nil", len(got))
+		t.Errorf("GetChunk: got %d bytes, want nil", len(got))
 	}
 }
 
-func TestGetICCProfileEmpty(t *testing.T) {
-	if _, err := mux.GetICCProfile(nil); err == nil {
-		t.Fatal("GetICCProfile(nil): expected error")
+func TestGetChunkEmpty(t *testing.T) {
+	if _, err := mux.GetChunk(nil, mux.ICCP); err == nil {
+		t.Fatal("GetChunk(nil): expected error")
 	}
-	if _, err := mux.GetICCProfile([]byte{}); err == nil {
-		t.Fatal("GetICCProfile(empty): expected error")
-	}
-}
-
-func TestGetICCProfileInvalid(t *testing.T) {
-	if _, err := mux.GetICCProfile([]byte("not a webp")); err == nil {
-		t.Fatal("GetICCProfile: expected error for invalid bitstream")
+	if _, err := mux.GetChunk([]byte{}, mux.ICCP); err == nil {
+		t.Fatal("GetChunk(empty): expected error")
 	}
 }
 
-func TestSetGetICCProfile(t *testing.T) {
+func TestGetChunkInvalid(t *testing.T) {
+	if _, err := mux.GetChunk([]byte("not a webp"), mux.ICCP); err == nil {
+		t.Fatal("GetChunk: expected error for invalid bitstream")
+	}
+}
+
+func TestGetChunkInvalidFourCC(t *testing.T) {
+	data := encodeTestWebP(t, false)
+	if _, err := mux.GetChunk(data, "ICC"); err == nil {
+		t.Fatal("GetChunk: expected error for short fourcc")
+	}
+	if _, err := mux.SetChunk(data, "ICC", []byte("x")); err == nil {
+		t.Fatal("SetChunk: expected error for short fourcc")
+	}
+}
+
+func TestSetGetChunkICCP(t *testing.T) {
 	src := encodeTestWebP(t, false)
 	icc := []byte("ICC PROFILE") // odd length exercises RIFF padding
 
-	withICC, err := mux.SetICCProfile(src, icc)
+	withICC, err := mux.SetChunk(src, mux.ICCP, icc)
 	if err != nil {
-		t.Fatalf("SetICCProfile: %v", err)
+		t.Fatalf("SetChunk: %v", err)
 	}
-	got, err := mux.GetICCProfile(withICC)
+	got, err := mux.GetChunk(withICC, mux.ICCP)
 	if err != nil {
-		t.Fatalf("GetICCProfile: %v", err)
+		t.Fatalf("GetChunk: %v", err)
 	}
 	if !bytes.Equal(got, icc) {
-		t.Errorf("extracted ICC = %q, want %q", got, icc)
+		t.Errorf("extracted ICCP = %q, want %q", got, icc)
 	}
 }
 
-func TestSetICCProfileReplacesExisting(t *testing.T) {
+func TestSetGetChunkEXIF(t *testing.T) {
 	src := encodeTestWebP(t, false)
-	withOld, err := mux.SetICCProfile(src, []byte("old-icc-profile-data"))
+	exif := []byte("Exif\x00\x00MM")
+
+	withExif, err := mux.SetChunk(src, mux.EXIF, exif)
 	if err != nil {
-		t.Fatalf("SetICCProfile(old): %v", err)
+		t.Fatalf("SetChunk(EXIF): %v", err)
+	}
+	got, err := mux.GetChunk(withExif, mux.EXIF)
+	if err != nil {
+		t.Fatalf("GetChunk(EXIF): %v", err)
+	}
+	if !bytes.Equal(got, exif) {
+		t.Errorf("extracted EXIF = %q, want %q", got, exif)
+	}
+	icc, err := mux.GetChunk(withExif, mux.ICCP)
+	if err != nil {
+		t.Fatalf("GetChunk(ICCP): %v", err)
+	}
+	if icc != nil {
+		t.Errorf("EXIF insert must not invent an ICCP chunk")
+	}
+}
+
+func TestSetChunkReplacesExisting(t *testing.T) {
+	src := encodeTestWebP(t, false)
+	withOld, err := mux.SetChunk(src, mux.ICCP, []byte("old-icc-profile-data"))
+	if err != nil {
+		t.Fatalf("SetChunk(old): %v", err)
 	}
 
 	newICC := []byte("new-icc")
-	withNew, err := mux.SetICCProfile(withOld, newICC)
+	withNew, err := mux.SetChunk(withOld, mux.ICCP, newICC)
 	if err != nil {
-		t.Fatalf("SetICCProfile(new): %v", err)
+		t.Fatalf("SetChunk(new): %v", err)
 	}
-	got, err := mux.GetICCProfile(withNew)
+	got, err := mux.GetChunk(withNew, mux.ICCP)
 	if err != nil {
-		t.Fatalf("GetICCProfile: %v", err)
+		t.Fatalf("GetChunk: %v", err)
 	}
 	if !bytes.Equal(got, newICC) {
-		t.Errorf("extracted ICC = %q, want %q", got, newICC)
+		t.Errorf("extracted ICCP = %q, want %q", got, newICC)
 	}
 }
 
-func TestSetICCProfileEmpty(t *testing.T) {
+func TestSetChunkEmpty(t *testing.T) {
 	src := encodeTestWebP(t, false)
-	out, err := mux.SetICCProfile(src, nil)
-	if err != nil {
-		t.Fatalf("SetICCProfile: %v", err)
-	}
-	if !bytes.Equal(out, src) {
-		t.Error("empty ICC should leave bitstream unchanged")
+	if _, err := mux.SetChunk(src, mux.ICCP, nil); err == nil {
+		t.Fatal("SetChunk: expected error for empty chunk")
 	}
 }
 
-func TestSetICCProfilePreservesPixels(t *testing.T) {
+func TestSetChunkPreservesPixels(t *testing.T) {
 	src := encodeTestWebP(t, false)
 	before, err := webp.DecodeNRGBA(src, &webp.DecoderOptions{})
 	if err != nil {
 		t.Fatalf("DecodeNRGBA(src): %v", err)
 	}
 
-	withICC, err := mux.SetICCProfile(src, []byte("test-icc-profile"))
+	withICC, err := mux.SetChunk(src, mux.ICCP, []byte("test-icc-profile"))
 	if err != nil {
-		t.Fatalf("SetICCProfile: %v", err)
+		t.Fatalf("SetChunk: %v", err)
 	}
 	after, err := webp.DecodeNRGBA(withICC, &webp.DecoderOptions{})
 	if err != nil {
 		t.Fatalf("DecodeNRGBA(withICC): %v", err)
 	}
 	if !bytes.Equal(before.Pix, after.Pix) {
-		t.Error("ICC is metadata-only; pixels must not change")
+		t.Error("metadata chunks must not change pixels")
 	}
 }
 
-func TestSetICCProfileLosslessAlpha(t *testing.T) {
+func TestSetChunkLosslessAlpha(t *testing.T) {
 	src := encodeTestWebP(t, true)
 	features, err := webp.GetFeatures(src)
 	if err != nil {
@@ -117,16 +147,16 @@ func TestSetICCProfileLosslessAlpha(t *testing.T) {
 		t.Fatal("test image should have alpha")
 	}
 
-	withICC, err := mux.SetICCProfile(src, []byte("alpha-icc"))
+	withICC, err := mux.SetChunk(src, mux.ICCP, []byte("alpha-icc"))
 	if err != nil {
-		t.Fatalf("SetICCProfile: %v", err)
+		t.Fatalf("SetChunk: %v", err)
 	}
-	got, err := mux.GetICCProfile(withICC)
+	got, err := mux.GetChunk(withICC, mux.ICCP)
 	if err != nil {
-		t.Fatalf("GetICCProfile: %v", err)
+		t.Fatalf("GetChunk: %v", err)
 	}
 	if !bytes.Equal(got, []byte("alpha-icc")) {
-		t.Errorf("extracted ICC = %q, want %q", got, "alpha-icc")
+		t.Errorf("extracted ICCP = %q, want %q", got, "alpha-icc")
 	}
 
 	features, err = webp.GetFeatures(withICC)
@@ -138,20 +168,50 @@ func TestSetICCProfileLosslessAlpha(t *testing.T) {
 	}
 }
 
-func TestGetICCProfileDespiteMissingAlphaFlag(t *testing.T) {
+func TestGetChunkDespiteMissingAlphaFlag(t *testing.T) {
 	src := encodeTestWebP(t, true)
-	withICC, err := mux.SetICCProfile(src, []byte("alpha-icc"))
+	withICC, err := mux.SetChunk(src, mux.ICCP, []byte("alpha-icc"))
 	if err != nil {
-		t.Fatalf("SetICCProfile: %v", err)
+		t.Fatalf("SetChunk: %v", err)
 	}
 
 	broken := clearVP8XAlphaFlag(t, withICC)
-	got, err := mux.GetICCProfile(broken)
+	got, err := mux.GetChunk(broken, mux.ICCP)
 	if err != nil {
-		t.Fatalf("GetICCProfile: %v", err)
+		t.Fatalf("GetChunk: %v", err)
 	}
 	if !bytes.Equal(got, []byte("alpha-icc")) {
-		t.Errorf("extracted ICC = %q, want %q", got, "alpha-icc")
+		t.Errorf("extracted ICCP = %q, want %q", got, "alpha-icc")
+	}
+}
+
+func TestSetChunkICCPAndEXIF(t *testing.T) {
+	src := encodeTestWebP(t, false)
+	icc := []byte("icc-bytes")
+	exif := []byte("exif-bytes")
+
+	withICC, err := mux.SetChunk(src, mux.ICCP, icc)
+	if err != nil {
+		t.Fatalf("SetChunk(ICCP): %v", err)
+	}
+	withBoth, err := mux.SetChunk(withICC, mux.EXIF, exif)
+	if err != nil {
+		t.Fatalf("SetChunk(EXIF): %v", err)
+	}
+
+	gotICC, err := mux.GetChunk(withBoth, mux.ICCP)
+	if err != nil {
+		t.Fatalf("GetChunk(ICCP): %v", err)
+	}
+	gotExif, err := mux.GetChunk(withBoth, mux.EXIF)
+	if err != nil {
+		t.Fatalf("GetChunk(EXIF): %v", err)
+	}
+	if !bytes.Equal(gotICC, icc) {
+		t.Errorf("ICCP = %q, want %q", gotICC, icc)
+	}
+	if !bytes.Equal(gotExif, exif) {
+		t.Errorf("EXIF = %q, want %q", gotExif, exif)
 	}
 }
 

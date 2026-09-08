@@ -76,17 +76,17 @@ func main() {
 }
 ```
 
-### ICC profiles (mux / demux)
+### Container chunks (mux / demux)
 
 Encode/decode stay in `github.com/pixiv/go-libwebp/webp` and link only `libwebp`.
-ICC chunk access is a separate package so callers that do not need the
-container API do not link `libwebpmux` / `libwebpdemux`.
+Chunk access (`ICCP`, `EXIF`, `XMP `, …) is a separate package so callers that
+do not need the container API do not link `libwebpmux` / `libwebpdemux`.
 
 ```
 import "github.com/pixiv/go-libwebp/webp/mux"
 
-icc, err := mux.GetICCProfile(data)
-data, err = mux.SetICCProfile(data, icc)
+icc, err := mux.GetChunk(data, mux.ICCP)
+data, err = mux.SetChunk(data, mux.ICCP, icc)
 ```
 
 ## TODO

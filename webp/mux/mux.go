@@ -4,96 +4,8 @@ package mux
 /*
 #cgo LDFLAGS: -lwebpmux -lwebpdemux -lwebp -lsharpyuv -lm
 
-#include <stdlib.h>
-#include <string.h>
 #include <webp/demux.h>
 #include <webp/mux.h>
-
-static const char kICCP[] = "ICCP";
-
-static WebPMuxError webpGetICCProfile(const uint8_t* data, size_t size, uint8_t** out, size_t* out_size) {
-	uint8_t* copy;
-	WebPData bitstream;
-	WebPDemuxer* demux;
-	WebPChunkIterator iter;
-	int found;
-
-	*out = NULL;
-	*out_size = 0;
-
-	copy = (uint8_t*)WebPMalloc(size);
-	if (copy == NULL) {
-		return WEBP_MUX_MEMORY_ERROR;
-	}
-	memcpy(copy, data, size);
-
-	bitstream.bytes = copy;
-	bitstream.size = size;
-	demux = WebPDemux(&bitstream);
-	if (demux == NULL) {
-		WebPFree(copy);
-		return WEBP_MUX_BAD_DATA;
-	}
-
-	found = WebPDemuxGetChunk(demux, kICCP, 1, &iter);
-	if (!found || iter.chunk.bytes == NULL || iter.chunk.size == 0) {
-		WebPDemuxDelete(demux);
-		WebPFree(copy);
-		return WEBP_MUX_OK;
-	}
-
-	*out = (uint8_t*)WebPMalloc(iter.chunk.size);
-	if (*out == NULL) {
-		WebPDemuxReleaseChunkIterator(&iter);
-		WebPDemuxDelete(demux);
-		WebPFree(copy);
-		return WEBP_MUX_MEMORY_ERROR;
-	}
-	memcpy(*out, iter.chunk.bytes, iter.chunk.size);
-	*out_size = iter.chunk.size;
-	WebPDemuxReleaseChunkIterator(&iter);
-	WebPDemuxDelete(demux);
-	WebPFree(copy);
-	return WEBP_MUX_OK;
-}
-
-static WebPMuxError webpSetICCProfile(const uint8_t* data, size_t size, const uint8_t* icc, size_t icc_size, uint8_t** out, size_t* out_size) {
-	WebPData bitstream;
-	WebPData icc_data;
-	WebPData assembled;
-	WebPMux* mux;
-	WebPMuxError err;
-
-	*out = NULL;
-	*out_size = 0;
-
-	bitstream.bytes = data;
-	bitstream.size = size;
-	mux = WebPMuxCreate(&bitstream, 1);
-	if (mux == NULL) {
-		return WEBP_MUX_BAD_DATA;
-	}
-
-	icc_data.bytes = icc;
-	icc_data.size = icc_size;
-	err = WebPMuxSetChunk(mux, kICCP, &icc_data, 1);
-	if (err != WEBP_MUX_OK) {
-		WebPMuxDelete(mux);
-		return err;
-	}
-
-	WebPDataInit(&assembled);
-	err = WebPMuxAssemble(mux, &assembled);
-	WebPMuxDelete(mux);
-	if (err != WEBP_MUX_OK) {
-		WebPDataClear(&assembled);
-		return err;
-	}
-
-	*out = (uint8_t*)assembled.bytes;
-	*out_size = assembled.size;
-	return WEBP_MUX_OK;
-}
 */
 import "C"
 
@@ -103,56 +15,139 @@ import (
 	"unsafe"
 )
 
+// FourCC is a RIFF chunk identifier. libwebp currently supports "ICCP", "EXIF",
+// and "XMP " (trailing space) for metadata via WebPMuxSetChunk / WebPDemuxGetChunk.
+type FourCC string
+
+const (
+	ICCP FourCC = "ICCP"
+	EXIF FourCC = "EXIF"
+	XMP  FourCC = "XMP "
+)
+
 var errEmptyWebPBitstream = errors.New("empty webp bitstream")
+var errEmptyChunk = errors.New("empty chunk")
+var errInvalidFourCC = errors.New("fourcc must be 4 bytes")
 var errWebPMuxAssemble = errors.New("Could not assemble webp bitstream")
 
-// GetICCProfile extracts the ICCP chunk from a WebP bitstream.
-// It returns nil, nil when the bitstream has no ICC profile.
+// GetChunk extracts the first chunk with the given fourcc from a WebP bitstream.
+// It returns nil, nil when the bitstream has no such chunk.
 // Reading uses libwebpdemux so files with inconsistent VP8X flags
-// (for example ICCP present but ALPHA_FLAG missing) still yield the profile.
-func GetICCProfile(data []byte) ([]byte, error) {
+// (for example ICCP present but ALPHA_FLAG missing) still yield the chunk.
+func GetChunk(data []byte, fourcc FourCC) ([]byte, error) {
 	if len(data) == 0 {
 		return nil, errEmptyWebPBitstream
 	}
-
-	var out *C.uint8_t
-	var outSize C.size_t
-	status := C.webpGetICCProfile((*C.uint8_t)(unsafe.Pointer(&data[0])), C.size_t(len(data)), &out, &outSize)
-	if status != C.WEBP_MUX_OK {
-		return nil, fmt.Errorf("WebPDemuxGetChunk returns unexpected status: %s", statusString(status))
+	cFourcc, err := cFourCC(fourcc)
+	if err != nil {
+		return nil, err
 	}
-	if out == nil || outSize == 0 {
+
+	bitstream, err := cWebPData(data)
+	if err != nil {
+		return nil, muxErrorf("WebPDemuxGetChunk", C.WEBP_MUX_MEMORY_ERROR)
+	}
+	defer C.WebPFree(unsafe.Pointer(bitstream.bytes))
+
+	demux := C.WebPDemux(&bitstream)
+	if demux == nil {
+		return nil, muxErrorf("WebPDemuxGetChunk", C.WEBP_MUX_BAD_DATA)
+	}
+	defer C.WebPDemuxDelete(demux)
+
+	var iter C.WebPChunkIterator
+	found := C.WebPDemuxGetChunk(demux, (*C.char)(unsafe.Pointer(&cFourcc[0])), 1, &iter)
+	if found != 0 {
+		defer C.WebPDemuxReleaseChunkIterator(&iter)
+	}
+	if found == 0 {
 		return nil, nil
 	}
-	defer C.WebPFree(unsafe.Pointer(out))
-	return C.GoBytes(unsafe.Pointer(out), C.int(outSize)), nil
+	if iter.chunk.size == 0 {
+		return []byte{}, nil
+	}
+	return C.GoBytes(unsafe.Pointer(iter.chunk.bytes), C.int(iter.chunk.size)), nil
 }
 
-// SetICCProfile returns a WebP bitstream with the given ICC profile.
-// An empty profile leaves the input unchanged.
-func SetICCProfile(data, icc []byte) ([]byte, error) {
-	if len(icc) == 0 {
-		return data, nil
-	}
+// SetChunk returns a WebP bitstream with the given chunk set for fourcc.
+// An existing chunk of the same fourcc is replaced. Empty chunks are rejected.
+func SetChunk(data []byte, fourcc FourCC, chunk []byte) ([]byte, error) {
 	if len(data) == 0 {
 		return nil, errEmptyWebPBitstream
 	}
-
-	var out *C.uint8_t
-	var outSize C.size_t
-	status := C.webpSetICCProfile(
-		(*C.uint8_t)(unsafe.Pointer(&data[0])), C.size_t(len(data)),
-		(*C.uint8_t)(unsafe.Pointer(&icc[0])), C.size_t(len(icc)),
-		&out, &outSize,
-	)
-	if status != C.WEBP_MUX_OK {
-		return nil, fmt.Errorf("WebPMuxSetChunk returns unexpected status: %s", statusString(status))
+	cFourcc, err := cFourCC(fourcc)
+	if err != nil {
+		return nil, err
 	}
-	if out == nil {
+	if len(chunk) == 0 {
+		return nil, errEmptyChunk
+	}
+
+	bitstream, err := cWebPData(data)
+	if err != nil {
+		return nil, muxErrorf("WebPMuxSetChunk", C.WEBP_MUX_MEMORY_ERROR)
+	}
+	defer C.WebPFree(unsafe.Pointer(bitstream.bytes))
+
+	chunkData, err := cWebPData(chunk)
+	if err != nil {
+		return nil, muxErrorf("WebPMuxSetChunk", C.WEBP_MUX_MEMORY_ERROR)
+	}
+	defer C.WebPFree(unsafe.Pointer(chunkData.bytes))
+
+	// Use copy_data=0 to avoid copying bitstream and chunkData a second time.
+	// The mux borrows both buffers. Freeing either one before WebPMuxDelete would
+	// cause a use-after-free. The defer order is safe: WebPMuxDelete runs before
+	// both WebPFree calls.
+	webpMux := C.WebPMuxCreate(&bitstream, 0)
+	if webpMux == nil {
+		return nil, muxErrorf("WebPMuxSetChunk", C.WEBP_MUX_BAD_DATA)
+	}
+	defer C.WebPMuxDelete(webpMux)
+
+	status := C.WebPMuxSetChunk(webpMux, (*C.char)(unsafe.Pointer(&cFourcc[0])), &chunkData, 0)
+	if status != C.WEBP_MUX_OK {
+		return nil, muxErrorf("WebPMuxSetChunk", status)
+	}
+
+	var assembled C.WebPData
+	status = C.WebPMuxAssemble(webpMux, &assembled)
+	if status != C.WEBP_MUX_OK {
+		C.WebPFree(unsafe.Pointer(assembled.bytes))
+		return nil, muxErrorf("WebPMuxSetChunk", status)
+	}
+	if assembled.bytes == nil {
 		return nil, errWebPMuxAssemble
 	}
-	defer C.WebPFree(unsafe.Pointer(out))
-	return C.GoBytes(unsafe.Pointer(out), C.int(outSize)), nil
+	defer C.WebPFree(unsafe.Pointer(assembled.bytes))
+	return C.GoBytes(unsafe.Pointer(assembled.bytes), C.int(assembled.size)), nil
+}
+
+func cFourCC(fourcc FourCC) ([4]byte, error) {
+	if len(fourcc) != 4 {
+		return [4]byte{}, errInvalidFourCC
+	}
+	var out [4]byte
+	copy(out[:], fourcc)
+	return out, nil
+}
+
+// cWebPData copies b into C memory. cgo forbids passing a WebPData whose bytes
+// pointer refers to Go memory (a Go pointer inside a Go-allocated struct).
+func cWebPData(b []byte) (C.WebPData, error) {
+	p := C.WebPMalloc(C.size_t(len(b)))
+	if p == nil {
+		return C.WebPData{}, errWebPMuxAssemble
+	}
+	copy(unsafe.Slice((*byte)(p), len(b)), b)
+	return C.WebPData{
+		bytes: (*C.uint8_t)(p),
+		size:  C.size_t(len(b)),
+	}, nil
+}
+
+func muxErrorf(op string, status C.WebPMuxError) error {
+	return fmt.Errorf("%s returns unexpected status: %s", op, statusString(status))
 }
 
 func statusString(status C.WebPMuxError) string {
