@@ -29,7 +29,6 @@ const (
 var errEmptyWebPBitstream = errors.New("empty webp bitstream")
 var errNilChunk = errors.New("nil chunk")
 var errFourCCLengthMustBe4 = errors.New("fourcc must be 4 bytes")
-var errWebPMalloc = errors.New("could not allocate memory")
 
 // GetChunk extracts the first chunk with the given fourcc from a WebP bitstream.
 // It returns nil, nil when the bitstream has no such chunk.
@@ -44,9 +43,9 @@ func GetChunk(data []byte, fourcc FourCC) ([]byte, error) {
 		return nil, err
 	}
 
-	bitstream, err := cWebPData(data)
-	if err != nil {
-		return nil, muxErrorf("WebPDemuxGetChunk", C.WEBP_MUX_MEMORY_ERROR)
+	bitstream, status := cWebPData(data)
+	if status != C.WEBP_MUX_OK {
+		return nil, muxErrorf("WebPDemuxGetChunk", status)
 	}
 	defer C.WebPFree(unsafe.Pointer(bitstream.bytes))
 
@@ -83,15 +82,15 @@ func SetChunk(data []byte, fourcc FourCC, chunk []byte) ([]byte, error) {
 		return nil, errNilChunk
 	}
 
-	bitstream, err := cWebPData(data)
-	if err != nil {
-		return nil, muxErrorf("WebPMuxSetChunk", C.WEBP_MUX_MEMORY_ERROR)
+	bitstream, status := cWebPData(data)
+	if status != C.WEBP_MUX_OK {
+		return nil, muxErrorf("WebPMuxSetChunk", status)
 	}
 	defer C.WebPFree(unsafe.Pointer(bitstream.bytes))
 
-	chunkData, err := cWebPData(chunk)
-	if err != nil {
-		return nil, muxErrorf("WebPMuxSetChunk", C.WEBP_MUX_MEMORY_ERROR)
+	chunkData, status := cWebPData(chunk)
+	if status != C.WEBP_MUX_OK {
+		return nil, muxErrorf("WebPMuxSetChunk", status)
 	}
 	defer C.WebPFree(unsafe.Pointer(chunkData.bytes))
 
@@ -105,7 +104,7 @@ func SetChunk(data []byte, fourcc FourCC, chunk []byte) ([]byte, error) {
 	}
 	defer C.WebPMuxDelete(webpMux)
 
-	status := C.WebPMuxSetChunk(webpMux, (*C.char)(unsafe.Pointer(&cFourcc[0])), &chunkData, 0)
+	status = C.WebPMuxSetChunk(webpMux, (*C.char)(unsafe.Pointer(&cFourcc[0])), &chunkData, 0)
 	if status != C.WEBP_MUX_OK {
 		return nil, muxErrorf("WebPMuxSetChunk", status)
 	}
@@ -135,7 +134,7 @@ func cFourCC(fourcc FourCC) ([4]byte, error) {
 // pointer refers to Go memory (a Go pointer inside a Go-allocated struct).
 // An empty slice still gets a non-NULL pointer: WebPMuxSetChunk rejects NULL
 // even when size is 0, and WebPMalloc(0) may return NULL.
-func cWebPData(b []byte) (C.WebPData, error) {
+func cWebPData(b []byte) (C.WebPData, C.WebPMuxError) {
 	n := len(b)
 	alloc := n
 	if alloc == 0 {
@@ -143,13 +142,13 @@ func cWebPData(b []byte) (C.WebPData, error) {
 	}
 	p := C.WebPMalloc(C.size_t(alloc))
 	if p == nil {
-		return C.WebPData{}, errWebPMalloc
+		return C.WebPData{}, C.WEBP_MUX_MEMORY_ERROR
 	}
 	copy(unsafe.Slice((*byte)(p), n), b)
 	return C.WebPData{
 		bytes: (*C.uint8_t)(p),
 		size:  C.size_t(n),
-	}, nil
+	}, C.WEBP_MUX_OK
 }
 
 func muxErrorf(op string, status C.WebPMuxError) error {
