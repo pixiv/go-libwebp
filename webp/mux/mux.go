@@ -10,6 +10,7 @@ package mux
 import "C"
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"unsafe"
@@ -66,7 +67,7 @@ func GetChunk(data []byte, fourcc FourCC) ([]byte, error) {
 	if iter.chunk.size == 0 {
 		return []byte{}, nil
 	}
-	return C.GoBytes(unsafe.Pointer(iter.chunk.bytes), C.int(iter.chunk.size)), nil
+	return bytes.Clone(unsafe.Slice((*byte)(unsafe.Pointer(iter.chunk.bytes)), iter.chunk.size)), nil
 }
 
 // SetChunk returns a WebP bitstream with the given chunk set for fourcc.
@@ -120,7 +121,7 @@ func SetChunk(data []byte, fourcc FourCC, chunk []byte) ([]byte, error) {
 		return nil, errWebPMuxAssemble
 	}
 	defer C.WebPFree(unsafe.Pointer(assembled.bytes))
-	return C.GoBytes(unsafe.Pointer(assembled.bytes), C.int(assembled.size)), nil
+	return bytes.Clone(unsafe.Slice((*byte)(unsafe.Pointer(assembled.bytes)), assembled.size)), nil
 }
 
 func cFourCC(fourcc FourCC) ([4]byte, error) {
