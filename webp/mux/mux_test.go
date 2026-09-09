@@ -37,13 +37,22 @@ func TestInvalidBitstream(t *testing.T) {
 
 func TestInvalidFourCC(t *testing.T) {
 	data := encodeTestWebP(t, false)
-	for _, fourcc := range []mux.FourCC{"ICC", "ICCPA"} {
-		if _, err := mux.GetChunk(data, fourcc); err == nil {
-			t.Errorf("GetChunk(%q): expected error", fourcc)
-		}
-		if _, err := mux.SetChunk(data, fourcc, []byte("x")); err == nil {
-			t.Errorf("SetChunk(%q): expected error", fourcc)
-		}
+	tests := []struct {
+		name   string
+		fourcc mux.FourCC
+	}{
+		{"fourCC is too short", mux.FourCC("ICC")},
+		{"fourCC is too long", mux.FourCC("ICCPA")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := mux.GetChunk(data, tt.fourcc); err == nil {
+				t.Errorf("GetChunk(%q): expected error", tt.fourcc)
+			}
+			if _, err := mux.SetChunk(data, tt.fourcc, []byte("x")); err == nil {
+				t.Errorf("SetChunk(%q): expected error", tt.fourcc)
+			}
+		})
 	}
 }
 
@@ -70,16 +79,16 @@ func TestSetGetChunk(t *testing.T) {
 			if !bytes.Equal(got, tt.chunk) {
 				t.Errorf("got %q, want %q", got, tt.chunk)
 			}
-			for _, other := range tests {
-				if other.fourcc == tt.fourcc {
+			for _, other := range []mux.FourCC{mux.ICCP, mux.EXIF, mux.XMP} {
+				if other == tt.fourcc {
 					continue
 				}
-				extra, err := mux.GetChunk(out, other.fourcc)
+				extra, err := mux.GetChunk(out, other)
 				if err != nil {
-					t.Fatalf("GetChunk(%s): %v", other.fourcc, err)
+					t.Fatalf("GetChunk(%s): %v", other, err)
 				}
 				if extra != nil {
-					t.Errorf("SetChunk(%s) invented a %q chunk", tt.fourcc, other.fourcc)
+					t.Errorf("SetChunk(%s) invented a %q chunk", tt.fourcc, other)
 				}
 			}
 		})
@@ -88,20 +97,39 @@ func TestSetGetChunk(t *testing.T) {
 
 func TestSetChunkReplacesExisting(t *testing.T) {
 	src := encodeTestWebP(t, false)
-	withOld, err := mux.SetChunk(src, mux.ICCP, []byte("old"))
-	if err != nil {
-		t.Fatalf("SetChunk(old): %v", err)
+	tests := []struct {
+		name string
+		sets [][]byte
+		want []byte
+	}{
+		{"replace existing", [][]byte{[]byte("old"), []byte("new")}, []byte("new")},
+		{"empty", [][]byte{[]byte{}}, []byte{}},
+		{"replace with empty", [][]byte{[]byte("old"), []byte{}}, []byte{}},
 	}
-	withNew, err := mux.SetChunk(withOld, mux.ICCP, []byte("new"))
-	if err != nil {
-		t.Fatalf("SetChunk(new): %v", err)
-	}
-	got, err := mux.GetChunk(withNew, mux.ICCP)
-	if err != nil {
-		t.Fatalf("GetChunk: %v", err)
-	}
-	if !bytes.Equal(got, []byte("new")) {
-		t.Errorf("got %q, want %q", got, "new")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := src
+			for _, chunk := range tt.sets {
+				next, err := mux.SetChunk(out, mux.ICCP, chunk)
+				if err != nil {
+					t.Fatalf("SetChunk: %v", err)
+				}
+				out = next
+			}
+			got, err := mux.GetChunk(out, mux.ICCP)
+			if err != nil {
+				t.Fatalf("GetChunk: %v", err)
+			}
+			if len(tt.want) == 0 {
+				if got == nil || len(got) != 0 {
+					t.Errorf("got %#v, want empty non-nil slice", got)
+				}
+				return
+			}
+			if !bytes.Equal(got, tt.want) {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 
@@ -109,37 +137,6 @@ func TestSetChunkNil(t *testing.T) {
 	src := encodeTestWebP(t, false)
 	if _, err := mux.SetChunk(src, mux.ICCP, nil); err == nil {
 		t.Fatal("SetChunk: expected error for nil chunk")
-	}
-}
-
-func TestSetChunkEmpty(t *testing.T) {
-	src := encodeTestWebP(t, false)
-	out, err := mux.SetChunk(src, mux.ICCP, []byte{})
-	if err != nil {
-		t.Fatalf("SetChunk: %v", err)
-	}
-	got, err := mux.GetChunk(out, mux.ICCP)
-	if err != nil {
-		t.Fatalf("GetChunk: %v", err)
-	}
-	if got == nil || len(got) != 0 {
-		t.Errorf("got %#v, want empty non-nil slice", got)
-	}
-
-	withOld, err := mux.SetChunk(src, mux.ICCP, []byte("old"))
-	if err != nil {
-		t.Fatalf("SetChunk(old): %v", err)
-	}
-	replaced, err := mux.SetChunk(withOld, mux.ICCP, []byte{})
-	if err != nil {
-		t.Fatalf("SetChunk(replace empty): %v", err)
-	}
-	got, err = mux.GetChunk(replaced, mux.ICCP)
-	if err != nil {
-		t.Fatalf("GetChunk: %v", err)
-	}
-	if got == nil || len(got) != 0 {
-		t.Errorf("replaced %#v, want empty non-nil slice", got)
 	}
 }
 
@@ -211,20 +208,20 @@ func TestSetMultipleChunks(t *testing.T) {
 	}
 
 	out := src
-	for _, tt := range chunks {
-		next, err := mux.SetChunk(out, tt.fourcc, tt.data)
+	for _, chunk := range chunks {
+		next, err := mux.SetChunk(out, chunk.fourcc, chunk.data)
 		if err != nil {
-			t.Fatalf("SetChunk(%s): %v", tt.fourcc, err)
+			t.Fatalf("SetChunk(%s): %v", chunk.fourcc, err)
 		}
 		out = next
 	}
-	for _, tt := range chunks {
-		got, err := mux.GetChunk(out, tt.fourcc)
+	for _, chunk := range chunks {
+		got, err := mux.GetChunk(out, chunk.fourcc)
 		if err != nil {
-			t.Fatalf("GetChunk(%s): %v", tt.fourcc, err)
+			t.Fatalf("GetChunk(%s): %v", chunk.fourcc, err)
 		}
-		if !bytes.Equal(got, tt.data) {
-			t.Errorf("%s = %q, want %q", tt.fourcc, got, tt.data)
+		if !bytes.Equal(got, chunk.data) {
+			t.Errorf("%s = %q, want %q", chunk.fourcc, got, chunk.data)
 		}
 	}
 }
