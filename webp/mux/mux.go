@@ -58,12 +58,10 @@ func GetChunk(data []byte, fourcc FourCC) ([]byte, error) {
 
 	var iter C.WebPChunkIterator
 	found := C.WebPDemuxGetChunk(demux, (*C.char)(unsafe.Pointer(&cFourcc[0])), 1, &iter)
-	if found != 0 {
-		defer C.WebPDemuxReleaseChunkIterator(&iter)
-	}
 	if found == 0 {
 		return nil, nil
 	}
+	defer C.WebPDemuxReleaseChunkIterator(&iter)
 	if iter.chunk.size == 0 {
 		return []byte{}, nil
 	}
@@ -114,14 +112,13 @@ func SetChunk(data []byte, fourcc FourCC, chunk []byte) ([]byte, error) {
 
 	var assembled C.WebPData
 	status = C.WebPMuxAssemble(webpMux, &assembled)
+	defer C.WebPFree(unsafe.Pointer(assembled.bytes))
 	if status != C.WEBP_MUX_OK {
-		C.WebPFree(unsafe.Pointer(assembled.bytes))
 		return nil, muxErrorf("WebPMuxSetChunk", status)
 	}
 	if assembled.bytes == nil {
 		return nil, errWebPMuxAssemble
 	}
-	defer C.WebPFree(unsafe.Pointer(assembled.bytes))
 	return bytes.Clone(unsafe.Slice((*byte)(unsafe.Pointer(assembled.bytes)), assembled.size)), nil
 }
 
@@ -156,7 +153,7 @@ func cWebPData(b []byte) (C.WebPData, error) {
 }
 
 func muxErrorf(op string, status C.WebPMuxError) error {
-	return fmt.Errorf("%s returns unexpected status: %s", op, statusString(status))
+	return fmt.Errorf("%s caught unexpected status: %s", op, statusString(status))
 }
 
 func statusString(status C.WebPMuxError) string {
