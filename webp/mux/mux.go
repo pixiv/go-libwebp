@@ -32,8 +32,6 @@ var errFourCCLengthMustBe4 = errors.New("fourcc must be 4 bytes")
 
 // GetChunk extracts the first chunk with the given fourcc from a WebP bitstream.
 // It returns nil, nil when the bitstream has no such chunk.
-// Reading uses libwebpdemux so files with inconsistent VP8X flags
-// (for example ICCP present but ALPHA_FLAG missing) still yield the chunk.
 func GetChunk(data []byte, fourcc FourCC) ([]byte, error) {
 	if len(data) == 0 {
 		return nil, errEmptyWebPBitstream

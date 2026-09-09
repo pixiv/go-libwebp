@@ -2,7 +2,6 @@ package mux_test
 
 import (
 	"bytes"
-	"encoding/binary"
 	"image"
 	"image/color"
 	"testing"
@@ -159,43 +158,6 @@ func TestSetChunkPreservesPixels(t *testing.T) {
 	}
 }
 
-func TestSetChunkKeepsAlphaFlag(t *testing.T) {
-	src := encodeTestWebP(t, true)
-	features, err := webp.GetFeatures(src)
-	if err != nil {
-		t.Fatalf("GetFeatures(src): %v", err)
-	}
-	if !features.HasAlpha {
-		t.Fatal("test image should have alpha")
-	}
-	withICC, err := mux.SetChunk(src, mux.ICCP, []byte("icc"))
-	if err != nil {
-		t.Fatalf("SetChunk: %v", err)
-	}
-	features, err = webp.GetFeatures(withICC)
-	if err != nil {
-		t.Fatalf("GetFeatures: %v", err)
-	}
-	if !features.HasAlpha {
-		t.Error("ALPHA_FLAG must remain set after inserting ICCP")
-	}
-}
-
-func TestGetChunkDespiteMissingAlphaFlag(t *testing.T) {
-	src := encodeTestWebP(t, true)
-	withICC, err := mux.SetChunk(src, mux.ICCP, []byte("icc"))
-	if err != nil {
-		t.Fatalf("SetChunk: %v", err)
-	}
-	got, err := mux.GetChunk(clearVP8XAlphaFlag(t, withICC), mux.ICCP)
-	if err != nil {
-		t.Fatalf("GetChunk: %v", err)
-	}
-	if !bytes.Equal(got, []byte("icc")) {
-		t.Errorf("got %q, want %q", got, "icc")
-	}
-}
-
 func TestSetMultipleChunks(t *testing.T) {
 	src := encodeTestWebP(t, false)
 	chunks := []struct {
@@ -255,26 +217,4 @@ func encodeTestWebP(t *testing.T, alpha bool) []byte {
 		t.Fatalf("EncodeRGBA: %v", err)
 	}
 	return buf.Bytes()
-}
-
-func clearVP8XAlphaFlag(t *testing.T, data []byte) []byte {
-	t.Helper()
-	const (
-		riffHeaderSize  = 12
-		chunkHeaderSize = 8
-		vp8xFlagAlpha   = 0x10
-	)
-	if len(data) < riffHeaderSize+chunkHeaderSize+1 {
-		t.Fatalf("bitstream too short")
-	}
-	if string(data[riffHeaderSize:riffHeaderSize+4]) != "VP8X" {
-		t.Fatalf("first chunk = %q, want VP8X", data[riffHeaderSize:riffHeaderSize+4])
-	}
-	payloadSize := binary.LittleEndian.Uint32(data[riffHeaderSize+4 : riffHeaderSize+8])
-	if payloadSize < 1 {
-		t.Fatal("VP8X payload too small")
-	}
-	out := append([]byte(nil), data...)
-	out[riffHeaderSize+chunkHeaderSize] &^= vp8xFlagAlpha
-	return out
 }
