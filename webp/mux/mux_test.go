@@ -110,10 +110,41 @@ func TestSetChunkReplacesExisting(t *testing.T) {
 	}
 }
 
-func TestSetChunkEmpty(t *testing.T) {
+func TestSetChunkNil(t *testing.T) {
 	src := encodeTestWebP(t, false)
 	if _, err := mux.SetChunk(src, mux.ICCP, nil); err == nil {
-		t.Fatal("SetChunk: expected error for empty chunk")
+		t.Fatal("SetChunk: expected error for nil chunk")
+	}
+}
+
+func TestSetChunkEmpty(t *testing.T) {
+	src := encodeTestWebP(t, false)
+	withEmpty, err := mux.SetChunk(src, mux.ICCP, []byte{})
+	if err != nil {
+		t.Fatalf("SetChunk(empty): %v", err)
+	}
+	got, err := mux.GetChunk(withEmpty, mux.ICCP)
+	if err != nil {
+		t.Fatalf("GetChunk: %v", err)
+	}
+	if got == nil || len(got) != 0 {
+		t.Errorf("extracted ICCP = %v, want empty non-nil slice", got)
+	}
+
+	withOld, err := mux.SetChunk(src, mux.ICCP, []byte("old-icc"))
+	if err != nil {
+		t.Fatalf("SetChunk(old): %v", err)
+	}
+	replaced, err := mux.SetChunk(withOld, mux.ICCP, []byte{})
+	if err != nil {
+		t.Fatalf("SetChunk(replace empty): %v", err)
+	}
+	got, err = mux.GetChunk(replaced, mux.ICCP)
+	if err != nil {
+		t.Fatalf("GetChunk after replace: %v", err)
+	}
+	if got == nil || len(got) != 0 {
+		t.Errorf("replaced ICCP = %v, want empty non-nil slice", got)
 	}
 }
 

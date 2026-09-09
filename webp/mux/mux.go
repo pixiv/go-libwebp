@@ -27,7 +27,7 @@ const (
 )
 
 var errEmptyWebPBitstream = errors.New("empty webp bitstream")
-var errEmptyChunk = errors.New("empty chunk")
+var errNilChunk = errors.New("nil chunk")
 var errInvalidFourCC = errors.New("fourcc must be 4 bytes")
 var errWebPMuxAssemble = errors.New("Could not assemble webp bitstream")
 
@@ -71,7 +71,8 @@ func GetChunk(data []byte, fourcc FourCC) ([]byte, error) {
 }
 
 // SetChunk returns a WebP bitstream with the given chunk set for fourcc.
-// An existing chunk of the same fourcc is replaced. Empty chunks are rejected.
+// An existing chunk of the same fourcc is replaced. A nil chunk is rejected
+// because WebPMuxSetChunk rejects NULL pointers; an empty chunk is allowed.
 func SetChunk(data []byte, fourcc FourCC, chunk []byte) ([]byte, error) {
 	if len(data) == 0 {
 		return nil, errEmptyWebPBitstream
@@ -80,8 +81,8 @@ func SetChunk(data []byte, fourcc FourCC, chunk []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(chunk) == 0 {
-		return nil, errEmptyChunk
+	if chunk == nil {
+		return nil, errNilChunk
 	}
 
 	bitstream, err := cWebPData(data)
@@ -135,15 +136,22 @@ func cFourCC(fourcc FourCC) ([4]byte, error) {
 
 // cWebPData copies b into C memory. cgo forbids passing a WebPData whose bytes
 // pointer refers to Go memory (a Go pointer inside a Go-allocated struct).
+// An empty slice still gets a non-NULL pointer: WebPMuxSetChunk rejects NULL
+// even when size is 0, and WebPMalloc(0) may return NULL.
 func cWebPData(b []byte) (C.WebPData, error) {
-	p := C.WebPMalloc(C.size_t(len(b)))
+	n := len(b)
+	alloc := n
+	if alloc == 0 {
+		alloc = 1
+	}
+	p := C.WebPMalloc(C.size_t(alloc))
 	if p == nil {
 		return C.WebPData{}, errWebPMuxAssemble
 	}
-	copy(unsafe.Slice((*byte)(p), len(b)), b)
+	copy(unsafe.Slice((*byte)(p), n), b)
 	return C.WebPData{
 		bytes: (*C.uint8_t)(p),
-		size:  C.size_t(len(b)),
+		size:  C.size_t(n),
 	}, nil
 }
 
