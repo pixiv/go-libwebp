@@ -23,21 +23,27 @@ func TestGetChunkMissing(t *testing.T) {
 	}
 }
 
-func TestGetChunkInvalidBitstream(t *testing.T) {
+func TestInvalidBitstream(t *testing.T) {
+	chunk := []byte("x")
 	for _, data := range [][]byte{nil, {}, []byte("not a webp")} {
 		if _, err := mux.GetChunk(data, mux.ICCP); err == nil {
 			t.Errorf("GetChunk(%q): expected error", data)
+		}
+		if _, err := mux.SetChunk(data, mux.ICCP, chunk); err == nil {
+			t.Errorf("SetChunk(%q): expected error", data)
 		}
 	}
 }
 
 func TestInvalidFourCC(t *testing.T) {
 	data := encodeTestWebP(t, false)
-	if _, err := mux.GetChunk(data, "ICC"); err == nil {
-		t.Error("GetChunk: expected error for short fourcc")
-	}
-	if _, err := mux.SetChunk(data, "ICC", []byte("x")); err == nil {
-		t.Error("SetChunk: expected error for short fourcc")
+	for _, fourcc := range []mux.FourCC{"ICC", "ICCPA"} {
+		if _, err := mux.GetChunk(data, fourcc); err == nil {
+			t.Errorf("GetChunk(%q): expected error", fourcc)
+		}
+		if _, err := mux.SetChunk(data, fourcc, []byte("x")); err == nil {
+			t.Errorf("SetChunk(%q): expected error", fourcc)
+		}
 	}
 }
 
@@ -49,6 +55,7 @@ func TestSetGetChunk(t *testing.T) {
 	}{
 		{mux.ICCP, []byte("ICC PROFILE")}, // odd length exercises RIFF padding
 		{mux.EXIF, []byte("Exif\x00\x00MM")},
+		{mux.XMP, []byte("<x:xmpmeta/>")},
 	}
 	for _, tt := range tests {
 		t.Run(string(tt.fourcc), func(t *testing.T) {
@@ -63,13 +70,16 @@ func TestSetGetChunk(t *testing.T) {
 			if !bytes.Equal(got, tt.chunk) {
 				t.Errorf("got %q, want %q", got, tt.chunk)
 			}
-			if tt.fourcc == mux.EXIF {
-				icc, err := mux.GetChunk(out, mux.ICCP)
-				if err != nil {
-					t.Fatalf("GetChunk(ICCP): %v", err)
+			for _, other := range tests {
+				if other.fourcc == tt.fourcc {
+					continue
 				}
-				if icc != nil {
-					t.Error("EXIF insert must not invent an ICCP chunk")
+				extra, err := mux.GetChunk(out, other.fourcc)
+				if err != nil {
+					t.Fatalf("GetChunk(%s): %v", other.fourcc, err)
+				}
+				if extra != nil {
+					t.Errorf("SetChunk(%s) invented a %q chunk", tt.fourcc, other.fourcc)
 				}
 			}
 		})
@@ -189,7 +199,7 @@ func TestGetChunkDespiteMissingAlphaFlag(t *testing.T) {
 	}
 }
 
-func TestSetChunkICCPAndEXIF(t *testing.T) {
+func TestSetMultipleChunks(t *testing.T) {
 	src := encodeTestWebP(t, false)
 	chunks := []struct {
 		fourcc mux.FourCC
@@ -197,6 +207,7 @@ func TestSetChunkICCPAndEXIF(t *testing.T) {
 	}{
 		{mux.ICCP, []byte("icc-bytes")},
 		{mux.EXIF, []byte("exif-bytes")},
+		{mux.XMP, []byte("xmp-bytes")},
 	}
 
 	out := src
