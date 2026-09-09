@@ -28,8 +28,8 @@ const (
 
 var errEmptyWebPBitstream = errors.New("empty webp bitstream")
 var errNilChunk = errors.New("nil chunk")
-var errInvalidFourCC = errors.New("fourcc must be 4 bytes")
-var errWebPMuxAssemble = errors.New("Could not assemble webp bitstream")
+var errFourCCLengthMustBe4 = errors.New("fourcc must be 4 bytes")
+var errWebPMalloc = errors.New("could not allocate memory")
 
 // GetChunk extracts the first chunk with the given fourcc from a WebP bitstream.
 // It returns nil, nil when the bitstream has no such chunk.
@@ -117,14 +117,14 @@ func SetChunk(data []byte, fourcc FourCC, chunk []byte) ([]byte, error) {
 		return nil, muxErrorf("WebPMuxSetChunk", status)
 	}
 	if assembled.bytes == nil {
-		return nil, errWebPMuxAssemble
+		return nil, muxErrorf("WebPMuxSetChunk", C.WEBP_MUX_MEMORY_ERROR)
 	}
 	return bytes.Clone(unsafe.Slice((*byte)(unsafe.Pointer(assembled.bytes)), assembled.size)), nil
 }
 
 func cFourCC(fourcc FourCC) ([4]byte, error) {
 	if len(fourcc) != 4 {
-		return [4]byte{}, errInvalidFourCC
+		return [4]byte{}, errFourCCLengthMustBe4
 	}
 	var out [4]byte
 	copy(out[:], fourcc)
@@ -143,7 +143,7 @@ func cWebPData(b []byte) (C.WebPData, error) {
 	}
 	p := C.WebPMalloc(C.size_t(alloc))
 	if p == nil {
-		return C.WebPData{}, errWebPMuxAssemble
+		return C.WebPData{}, errWebPMalloc
 	}
 	copy(unsafe.Slice((*byte)(p), n), b)
 	return C.WebPData{
