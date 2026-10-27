@@ -68,22 +68,35 @@ func TestInvalidBitstream(t *testing.T) {
 	}
 }
 
-func TestInvalidFourCC(t *testing.T) {
-	data := util.ReadFile("checkerboard-lossy.webp")
-	tests := []struct {
-		name   string
-		fourcc mux.FourCC
-	}{
-		{"fourCC is too short", mux.FourCC("ICC")},
-		{"fourCC is too long", mux.FourCC("ICCPA")},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if _, err := mux.GetChunk(data, tt.fourcc); err == nil {
-				t.Errorf("GetChunk(%q): expected error", tt.fourcc)
+func TestReadFourCC(t *testing.T) {
+	for _, format := range webPFiles {
+		t.Run(format.name, func(t *testing.T) {
+			data := util.ReadFile(format.file)
+			tests := []struct {
+				name       string
+				fourcc     mux.FourCC
+				wantGetErr bool
+			}{
+				{"fourCC is too short", "ICC", true},
+				{"fourCC is too long", "ICCPA", true},
+				{"VP8 without trailing space", "VP8", true},
+				{"VP8 image chunk", "VP8 ", false},
+				{"VP8L image chunk", "VP8L", false},
+				{"ALPH image chunk", "ALPH", false},
 			}
-			if _, err := mux.SetChunk(data, tt.fourcc, []byte("x")); err == nil {
-				t.Errorf("SetChunk(%q): expected error", tt.fourcc)
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					got, err := mux.GetChunk(data, tt.fourcc)
+					if (err != nil) != tt.wantGetErr {
+						t.Errorf("GetChunk(%q): error = %v, want error = %t", tt.fourcc, err, tt.wantGetErr)
+					}
+					if got != nil {
+						t.Errorf("GetChunk(%q): got %d bytes, want nil", tt.fourcc, len(got))
+					}
+					if _, err := mux.SetChunk(data, tt.fourcc, []byte("x")); err == nil {
+						t.Errorf("SetChunk(%q): expected error", tt.fourcc)
+					}
+				})
 			}
 		})
 	}
