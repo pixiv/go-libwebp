@@ -252,6 +252,38 @@ func TestSetMultipleChunks(t *testing.T) {
 					t.Errorf("%s = %q, want %q", chunk.fourcc, got, chunk.data)
 				}
 			}
+			for _, target := range chunks {
+				t.Run(string(target.fourcc), func(t *testing.T) {
+					tests := []struct {
+						name string
+						data []byte
+					}{
+						{"replace", []byte("replacement")},
+						{"replace with empty", []byte{}},
+					}
+					for _, tt := range tests {
+						t.Run(tt.name, func(t *testing.T) {
+							updated, err := mux.SetChunk(out, target.fourcc, tt.data)
+							if err != nil {
+								t.Fatalf("SetChunk(%s): %v", target.fourcc, err)
+							}
+							for _, chunk := range chunks {
+								want := chunk.data
+								if chunk.fourcc == target.fourcc {
+									want = tt.data
+								}
+								got, err := mux.GetChunk(updated, chunk.fourcc)
+								if err != nil {
+									t.Fatalf("GetChunk(%s): %v", chunk.fourcc, err)
+								}
+								if got == nil || !bytes.Equal(got, want) {
+									t.Errorf("after SetChunk(%s), %s = %#v, want %#v", target.fourcc, chunk.fourcc, got, want)
+								}
+							}
+						})
+					}
+				})
+			}
 		})
 	}
 }
