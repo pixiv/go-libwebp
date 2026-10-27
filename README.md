@@ -85,9 +85,50 @@ do not need the container API do not link `libwebpmux` / `libwebpdemux`.
 ```
 import "github.com/pixiv/go-libwebp/webp/mux"
 
-icc, err := mux.GetChunk(data, mux.ICCP)
-data, err = mux.SetChunk(data, mux.ICCP, icc)
+// Copy Go bytes into owned C storage.
+input := mux.NewData(data)
+if input == nil {
+    panic("allocation failed")
+}
+defer mux.DataClear(input)
+
+m := mux.MuxCreate(input, false)
+if m == nil {
+    panic("invalid WebP or allocation failure")
+}
+defer mux.MuxDelete(m)
+
+icc := mux.NewData(iccBytes)
+if icc == nil {
+    panic("allocation failed")
+}
+// copyData=true lets us release icc immediately after setting the chunk.
+status := mux.MuxSetChunk(m, mux.ICCP, icc, true)
+mux.DataClear(icc)
+if status != mux.MuxOK {
+    panic(status)
+}
+
+var output mux.Data
+if status := mux.MuxAssemble(m, &output); status != mux.MuxOK {
+    panic(status)
+}
+defer mux.DataClear(&output)
+// Consume output.Bytes() before output is cleared.
 ```
+
+The bindings expose individual C operations (without the `WebP` prefix),
+including explicit creation, assembly and deletion. `MuxError` preserves C
+status codes, including `MuxNotFound`. `NewData` copies Go bytes into C memory;
+`Data.Bytes()` returns a view without copying.
+
+For reading chunks, use `Demux(input)`, then
+`DemuxGetChunk(d, mux.ICCP, 1, &iter)` with a `mux.ChunkIterator`.
+It returns a boolean; `iter.Chunk()` gives borrowed `Data`.
+Call `DemuxReleaseChunkIterator(&iter)` before `DemuxDelete(d)` and keep
+`input` alive until the demuxer is deleted. Borrowed data must not be passed to
+`DataClear`. With `copyData=false`, mux input buffers must also stay alive for
+all operations that use them; see the function documentation for details.
 
 ## TODO
 
