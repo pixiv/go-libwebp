@@ -151,44 +151,57 @@ func TestSetGetChunk(t *testing.T) {
 }
 
 func TestSetChunkReplacesExisting(t *testing.T) {
+	tests := []struct {
+		name string
+		sets [][]byte
+		want []byte
+	}{
+		{"replace existing", [][]byte{[]byte("old"), []byte("new")}, []byte("new")},
+		{"empty", [][]byte{[]byte{}}, []byte{}},
+		{"replace with empty", [][]byte{[]byte("old"), []byte{}}, []byte{}},
+	}
+
 	for _, format := range webPFiles {
-		t.Run(format.name, func(t *testing.T) {
-			src := util.ReadFile(format.file)
-			tests := []struct {
-				name string
-				sets [][]byte
-				want []byte
-			}{
-				{"replace existing", [][]byte{[]byte("old"), []byte("new")}, []byte("new")},
-				{"empty", [][]byte{[]byte{}}, []byte{}},
-				{"replace with empty", [][]byte{[]byte("old"), []byte{}}, []byte{}},
-			}
-			for _, tt := range tests {
-				t.Run(tt.name, func(t *testing.T) {
-					out := src
-					for _, chunk := range tt.sets {
-						next, err := mux.SetChunk(out, mux.ICCP, chunk)
-						if err != nil {
-							t.Fatalf("SetChunk: %v", err)
-						}
-						out = next
-					}
-					got, err := mux.GetChunk(out, mux.ICCP)
+		for _, tt := range tests {
+			t.Run(format.name+"/"+tt.name, func(t *testing.T) {
+				out := util.ReadFile(format.file)
+				before := make(map[mux.FourCC][]byte)
+				for _, fourcc := range []mux.FourCC{mux.EXIF, mux.XMP} {
+					chunk, err := mux.GetChunk(out, fourcc)
 					if err != nil {
-						t.Fatalf("GetChunk: %v", err)
+						t.Fatalf("GetChunk(%s) before modification: %v", fourcc, err)
 					}
-					if len(tt.want) == 0 {
-						if got == nil || len(got) != 0 {
-							t.Errorf("got %#v, want empty non-nil slice", got)
-						}
-						return
+					before[fourcc] = chunk
+				}
+				for _, chunk := range tt.sets {
+					next, err := mux.SetChunk(out, mux.ICCP, chunk)
+					if err != nil {
+						t.Fatalf("SetChunk(ICCP): %v", err)
 					}
-					if !bytes.Equal(got, tt.want) {
-						t.Errorf("got %q, want %q", got, tt.want)
+					out = next
+				}
+				got, err := mux.GetChunk(out, mux.ICCP)
+				if err != nil {
+					t.Fatalf("GetChunk(ICCP): %v", err)
+				}
+				if len(tt.want) == 0 {
+					if got == nil || len(got) != 0 {
+						t.Errorf("ICCP = %#v, want empty non-nil slice", got)
 					}
-				})
-			}
-		})
+				} else if !bytes.Equal(got, tt.want) {
+					t.Errorf("ICCP = %q, want %q", got, tt.want)
+				}
+				for fourcc, want := range before {
+					got, err := mux.GetChunk(out, fourcc)
+					if err != nil {
+						t.Fatalf("GetChunk(%s): %v", fourcc, err)
+					}
+					if (got == nil) != (want == nil) || !bytes.Equal(got, want) {
+						t.Errorf("%s = %#v, want unchanged %#v", fourcc, got, want)
+					}
+				}
+			})
+		}
 	}
 }
 
