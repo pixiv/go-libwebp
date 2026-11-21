@@ -9,6 +9,9 @@ A implementation of Go binding for [libwebp](https://developers.google.com/speed
 ## Dependencies
 
 - libwebp 1.3.2 and above
+- cgo: this package calls into libwebp through cgo, so building needs a C compiler and the
+  libwebp headers. Cross-compiling needs a C toolchain with `CGO_ENABLED=1`; a
+  `CGO_ENABLED=0` build fails with an explicit error instead of undefined identifiers.
 
 ## Usage
 
