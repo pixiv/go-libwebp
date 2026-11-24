@@ -432,7 +432,7 @@ func TestEncodeYUVAWithProgressCanceled(t *testing.T) {
 
 func TestEncodeGray(t *testing.T) {
 	p := image.NewGray(image.Rect(0, 0, 1, 10))
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		p.SetGray(0, i, color.Gray{uint8(float32(i) / 10 * 255)})
 	}
 
@@ -456,7 +456,7 @@ func TestEncodeGray(t *testing.T) {
 
 func TestEncodeGrayWithProgress(t *testing.T) {
 	p := image.NewGray(image.Rect(0, 0, 1, 10))
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		p.SetGray(0, i, color.Gray{uint8(float32(i) / 10 * 255)})
 	}
 
@@ -483,7 +483,7 @@ func TestEncodeGrayWithProgress(t *testing.T) {
 
 func TestEncodeGrayWithProgressCanceled(t *testing.T) {
 	p := image.NewGray(image.Rect(0, 0, 1, 10))
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		p.SetGray(0, i, color.Gray{uint8(float32(i) / 10 * 255)})
 	}
 
